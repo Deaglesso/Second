@@ -1,10 +1,12 @@
 using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Second.Application.Contracts.Repositories;
 using Second.Application.Contracts.Services;
 using Second.Application.Dtos;
 using Second.Application.Dtos.Requests;
+using Second.Application.Models;
 using Second.Domain.Entities;
 using Second.Domain.Enums;
 
@@ -45,6 +47,25 @@ namespace Second.Persistence.Implementations.Services
         {
             var profile = await _sellerProfileRepository.GetByUserIdAsync(userId, cancellationToken);
             return profile is null ? null : MapProfile(profile);
+        }
+
+        public async Task<PagedResult<SellerProfileDto>> GetAllAsync(
+            PageRequest pageRequest,
+            CancellationToken cancellationToken = default)
+        {
+            var (items, totalCount) = await _sellerProfileRepository.GetAllAsync(
+                pageRequest.Skip,
+                pageRequest.PageSize,
+                cancellationToken);
+
+            return new PagedResult<SellerProfileDto>
+            {
+                Items = items.Select(MapProfile).ToList(),
+                PageNumber = pageRequest.PageNumber,
+                PageSize = pageRequest.PageSize,
+                TotalCount = totalCount,
+                TotalPages = (int)Math.Ceiling(totalCount / (double)pageRequest.PageSize)
+            };
         }
 
         public async Task<SellerProfileDto> UpdateAsync(UpdateSellerProfileRequest request, CancellationToken cancellationToken = default)

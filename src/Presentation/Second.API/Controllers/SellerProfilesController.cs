@@ -3,9 +3,11 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using Second.API.Models;
 using Second.Application.Contracts.Services;
 using Second.Application.Dtos;
 using Second.Application.Dtos.Requests;
+using Second.Application.Models;
 
 namespace Second.API.Controllers
 {
@@ -62,6 +64,22 @@ namespace Second.API.Controllers
             return Ok(profile);
         }
 
+        [HttpGet]
+        public async Task<ActionResult<PagedResult<SellerProfileDto>>> GetAllAsync(
+            [FromQuery] PaginationParameters pagination,
+            CancellationToken cancellationToken)
+        {
+            var validationResult = ValidatePagination(pagination);
+            if (validationResult is not null)
+            {
+                return validationResult;
+            }
+
+            var pageRequest = new PageRequest { PageNumber = pagination.PageNumber, PageSize = pagination.PageSize };
+            var profiles = await _sellerProfileService.GetAllAsync(pageRequest, cancellationToken);
+            return Ok(profiles);
+        }
+
         [HttpPut("{sellerProfileId:guid}")]
         public async Task<ActionResult<SellerProfileDto>> UpdateAsync(
             Guid sellerProfileId,
@@ -90,6 +108,18 @@ namespace Second.API.Controllers
                 Title = title,
                 Detail = detail
             };
+        }
+
+        private ActionResult? ValidatePagination(PaginationParameters pagination)
+        {
+            if (pagination.IsValid())
+            {
+                return null;
+            }
+
+            return BadRequest(CreateProblemDetails(
+                "Invalid pagination parameters.",
+                $"PageNumber must be >= 1 and PageSize must be between 1 and {PaginationParameters.MaxPageSize}."));
         }
     }
 }

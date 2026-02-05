@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
@@ -31,6 +33,25 @@ namespace Second.Persistence.Implementations.Repositories
                 .Include(profile => profile.Products)
                 .AsNoTracking()
                 .FirstOrDefaultAsync(profile => profile.UserId == userId, cancellationToken);
+        }
+
+        public async Task<(IReadOnlyList<SellerProfile> Items, int TotalCount)> GetAllAsync(
+            int skip,
+            int take,
+            CancellationToken cancellationToken = default)
+        {
+            var query = _dbContext.SellerProfiles
+                .AsNoTracking();
+
+            var totalCount = await query.CountAsync(cancellationToken);
+
+            var items = await query
+                .OrderByDescending(profile => profile.CreatedAt)
+                .Skip(skip)
+                .Take(take)
+                .ToListAsync(cancellationToken);
+
+            return (items, totalCount);
         }
 
         public async Task AddAsync(SellerProfile profile, CancellationToken cancellationToken = default)
