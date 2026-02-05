@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Second.API.Models
+namespace Second.Application.Models
 {
     public sealed record PagedResult<T>
     {

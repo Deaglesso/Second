@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -7,6 +6,7 @@ using Second.Application.Contracts.Repositories;
 using Second.Application.Contracts.Services;
 using Second.Application.Dtos;
 using Second.Application.Dtos.Requests;
+using Second.Application.Models;
 using Second.Domain.Entities;
 
 namespace Second.Persistence.Implementations.Services
@@ -53,10 +53,25 @@ namespace Second.Persistence.Implementations.Services
             return chatRoom is null ? null : MapChatRoom(chatRoom);
         }
 
-        public async Task<IReadOnlyList<ChatRoomDto>> GetChatRoomsForUserAsync(Guid userId, CancellationToken cancellationToken = default)
+        public async Task<PagedResult<ChatRoomDto>> GetChatRoomsForUserAsync(
+            Guid userId,
+            PageRequest pageRequest,
+            CancellationToken cancellationToken = default)
         {
-            var chatRooms = await _chatRoomRepository.GetByUserIdAsync(userId, cancellationToken);
-            return chatRooms.Select(MapChatRoom).ToList();
+            var (items, totalCount) = await _chatRoomRepository.GetByUserIdAsync(
+                userId,
+                pageRequest.Skip,
+                pageRequest.PageSize,
+                cancellationToken);
+
+            return new PagedResult<ChatRoomDto>
+            {
+                Items = items.Select(MapChatRoom).ToList(),
+                PageNumber = pageRequest.PageNumber,
+                PageSize = pageRequest.PageSize,
+                TotalCount = totalCount,
+                TotalPages = (int)Math.Ceiling(totalCount / (double)pageRequest.PageSize)
+            };
         }
 
         public async Task<MessageDto> SendMessageAsync(SendMessageRequest request, CancellationToken cancellationToken = default)
@@ -81,10 +96,25 @@ namespace Second.Persistence.Implementations.Services
             return MapMessage(message);
         }
 
-        public async Task<IReadOnlyList<MessageDto>> GetMessagesAsync(Guid chatRoomId, CancellationToken cancellationToken = default)
+        public async Task<PagedResult<MessageDto>> GetMessagesAsync(
+            Guid chatRoomId,
+            PageRequest pageRequest,
+            CancellationToken cancellationToken = default)
         {
-            var messages = await _messageRepository.GetByChatRoomIdAsync(chatRoomId, cancellationToken);
-            return messages.Select(MapMessage).ToList();
+            var (items, totalCount) = await _messageRepository.GetByChatRoomIdAsync(
+                chatRoomId,
+                pageRequest.Skip,
+                pageRequest.PageSize,
+                cancellationToken);
+
+            return new PagedResult<MessageDto>
+            {
+                Items = items.Select(MapMessage).ToList(),
+                PageNumber = pageRequest.PageNumber,
+                PageSize = pageRequest.PageSize,
+                TotalCount = totalCount,
+                TotalPages = (int)Math.Ceiling(totalCount / (double)pageRequest.PageSize)
+            };
         }
 
         private static ChatRoomDto MapChatRoom(ChatRoom chatRoom)

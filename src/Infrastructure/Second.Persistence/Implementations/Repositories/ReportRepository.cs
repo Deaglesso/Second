@@ -20,20 +20,47 @@ namespace Second.Persistence.Implementations.Repositories
             _dbContext = dbContext;
         }
 
-        public async Task<IReadOnlyList<Report>> GetByTargetAsync(ReportTargetType targetType, Guid targetId, CancellationToken cancellationToken = default)
+        public async Task<(IReadOnlyList<Report> Items, int TotalCount)> GetByTargetAsync(
+            ReportTargetType targetType,
+            Guid targetId,
+            int skip,
+            int take,
+            CancellationToken cancellationToken = default)
         {
-            return await _dbContext.Reports
+            var query = _dbContext.Reports
                 .AsNoTracking()
-                .Where(report => report.TargetType == targetType && report.TargetId == targetId)
+                .Where(report => report.TargetType == targetType && report.TargetId == targetId);
+
+            var totalCount = await query.CountAsync(cancellationToken);
+
+            var items = await query
+                .OrderByDescending(report => report.CreatedAt)
+                .Skip(skip)
+                .Take(take)
                 .ToListAsync(cancellationToken);
+
+            return (items, totalCount);
         }
 
-        public async Task<IReadOnlyList<Report>> GetByReporterAsync(Guid reporterId, CancellationToken cancellationToken = default)
+        public async Task<(IReadOnlyList<Report> Items, int TotalCount)> GetByReporterAsync(
+            Guid reporterId,
+            int skip,
+            int take,
+            CancellationToken cancellationToken = default)
         {
-            return await _dbContext.Reports
+            var query = _dbContext.Reports
                 .AsNoTracking()
-                .Where(report => report.ReporterId == reporterId)
+                .Where(report => report.ReporterId == reporterId);
+
+            var totalCount = await query.CountAsync(cancellationToken);
+
+            var items = await query
+                .OrderByDescending(report => report.CreatedAt)
+                .Skip(skip)
+                .Take(take)
                 .ToListAsync(cancellationToken);
+
+            return (items, totalCount);
         }
 
         public async Task AddAsync(Report report, CancellationToken cancellationToken = default)
