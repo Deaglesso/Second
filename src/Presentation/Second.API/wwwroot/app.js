@@ -62,7 +62,7 @@ const handlers = {
       sellerProfileId: form.sellerProfileId.value,
       title: form.title.value,
       priceText: form.priceText.value,
-      condition: Number(form.condition.value),
+      condition: form.condition.value,
       description: form.description.value,
       imageUrls,
     };
@@ -76,15 +76,6 @@ const handlers = {
       pageSize: form.pageSize.value,
     });
     const endpoint = `/api/products/active${query}`;
-    setLog(requestLog, { method: "GET", endpoint });
-    return getJson(endpoint);
-  },
-  "list-products-by-seller": async (form) => {
-    const query = buildQuery({
-      pageNumber: form.pageNumber.value,
-      pageSize: form.pageSize.value,
-    });
-    const endpoint = `/api/products/by-seller/${form.sellerProfileId.value}${query}`;
     setLog(requestLog, { method: "GET", endpoint });
     return getJson(endpoint);
   },
@@ -113,46 +104,6 @@ const handlers = {
       pageSize: form.pageSize.value,
     });
     const endpoint = `/api/chats/by-user/${form.userId.value}${query}`;
-    setLog(requestLog, { method: "GET", endpoint });
-    return getJson(endpoint);
-  },
-  "list-messages": async (form) => {
-    const query = buildQuery({
-      pageNumber: form.pageNumber.value,
-      pageSize: form.pageSize.value,
-    });
-    const endpoint = `/api/chats/${form.chatRoomId.value}/messages${query}`;
-    setLog(requestLog, { method: "GET", endpoint });
-    return getJson(endpoint);
-  },
-  "create-report": async (form) => {
-    const payload = {
-      reporterId: form.reporterId.value,
-      targetType: Number(form.targetType.value),
-      targetId: form.targetId.value,
-      reason: form.reason.value,
-    };
-    const endpoint = "/api/reports";
-    setLog(requestLog, { method: "POST", endpoint, payload });
-    return postJson(endpoint, payload);
-  },
-  "list-reports-by-target": async (form) => {
-    const query = buildQuery({
-      targetType: form.targetType.value,
-      targetId: form.targetId.value,
-      pageNumber: form.pageNumber.value,
-      pageSize: form.pageSize.value,
-    });
-    const endpoint = `/api/reports/by-target${query}`;
-    setLog(requestLog, { method: "GET", endpoint });
-    return getJson(endpoint);
-  },
-  "list-reports-by-reporter": async (form) => {
-    const query = buildQuery({
-      pageNumber: form.pageNumber.value,
-      pageSize: form.pageSize.value,
-    });
-    const endpoint = `/api/reports/by-reporter/${form.reporterId.value}${query}`;
     setLog(requestLog, { method: "GET", endpoint });
     return getJson(endpoint);
   },

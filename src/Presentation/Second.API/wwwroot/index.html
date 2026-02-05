@@ -105,17 +105,11 @@
             </label>
             <label>
               Condition
-              <select name="condition" required>
-                <option value="0">New</option>
-                <option value="1">Like New</option>
-                <option value="2" selected>Used</option>
-                <option value="3">Heavily Used</option>
-                <option value="4">Vintage</option>
-              </select>
+              <input name="condition" placeholder="Good" required />
             </label>
             <label>
               Description
-              <textarea name="description" rows="3" placeholder="Warm glow, great condition." required></textarea>
+              <textarea name="description" rows="3" placeholder="Warm glow, great condition."></textarea>
             </label>
             <label>
               Image URLs (comma separated)
@@ -135,23 +129,6 @@
               <input name="pageSize" type="number" min="1" max="100" value="10" />
             </label>
             <button type="submit">GET /api/products/active</button>
-          </form>
-
-          <form class="card" data-endpoint="list-products-by-seller">
-            <h3>List Products by Seller</h3>
-            <label>
-              Seller profile ID
-              <input name="sellerProfileId" placeholder="GUID" required />
-            </label>
-            <label>
-              Page number
-              <input name="pageNumber" type="number" min="1" value="1" />
-            </label>
-            <label>
-              Page size
-              <input name="pageSize" type="number" min="1" max="100" value="10" />
-            </label>
-            <button type="submit">GET /api/products/by-seller/{sellerProfileId}</button>
           </form>
 
           <form class="card" data-endpoint="start-chat">
@@ -203,90 +180,6 @@
               <input name="pageSize" type="number" min="1" max="100" value="10" />
             </label>
             <button type="submit">GET /api/chats/by-user/{userId}</button>
-          </form>
-
-          <form class="card" data-endpoint="list-messages">
-            <h3>List Messages</h3>
-            <label>
-              Chat room ID
-              <input name="chatRoomId" placeholder="GUID" required />
-            </label>
-            <label>
-              Page number
-              <input name="pageNumber" type="number" min="1" value="1" />
-            </label>
-            <label>
-              Page size
-              <input name="pageSize" type="number" min="1" max="100" value="10" />
-            </label>
-            <button type="submit">GET /api/chats/{chatRoomId}/messages</button>
-          </form>
-
-          <form class="card" data-endpoint="create-report">
-            <h3>Create Report</h3>
-            <label>
-              Reporter ID
-              <input name="reporterId" placeholder="GUID" required />
-            </label>
-            <label>
-              Target type
-              <select name="targetType">
-                <option value="0">Product</option>
-                <option value="1">Seller</option>
-                <option value="2">Message</option>
-              </select>
-            </label>
-            <label>
-              Target ID
-              <input name="targetId" placeholder="GUID" required />
-            </label>
-            <label>
-              Reason
-              <textarea name="reason" rows="3" placeholder="Listing accuracy" required></textarea>
-            </label>
-            <button type="submit">POST /api/reports</button>
-          </form>
-
-          <form class="card" data-endpoint="list-reports-by-target">
-            <h3>Reports by Target</h3>
-            <label>
-              Target type
-              <select name="targetType">
-                <option value="0">Product</option>
-                <option value="1">Seller</option>
-                <option value="2">Message</option>
-              </select>
-            </label>
-            <label>
-              Target ID
-              <input name="targetId" placeholder="GUID" required />
-            </label>
-            <label>
-              Page number
-              <input name="pageNumber" type="number" min="1" value="1" />
-            </label>
-            <label>
-              Page size
-              <input name="pageSize" type="number" min="1" max="100" value="10" />
-            </label>
-            <button type="submit">GET /api/reports/by-target</button>
-          </form>
-
-          <form class="card" data-endpoint="list-reports-by-reporter">
-            <h3>Reports by Reporter</h3>
-            <label>
-              Reporter ID
-              <input name="reporterId" placeholder="GUID" required />
-            </label>
-            <label>
-              Page number
-              <input name="pageNumber" type="number" min="1" value="1" />
-            </label>
-            <label>
-              Page size
-              <input name="pageSize" type="number" min="1" max="100" value="10" />
-            </label>
-            <button type="submit">GET /api/reports/by-reporter/{reporterId}</button>
           </form>
         </div>
 
