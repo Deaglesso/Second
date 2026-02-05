@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Second.Application.Contracts.Persistence;
 using Second.Application.Contracts.Repositories;
 using Second.Application.Contracts.Services;
 using Second.Persistence.Data;
@@ -15,6 +16,7 @@ namespace Second.Persistence
         {
             services.AddDbContext<AppDbContext>(options =>
                 options.UseSqlServer(configuration.GetConnectionString("DefaultConnection")));
+            services.AddScoped<IAppDbContext>(provider => provider.GetRequiredService<AppDbContext>());
 
             services.AddScoped<IProductRepository, ProductRepository>();
             services.AddScoped<IProductImageRepository, ProductImageRepository>();
