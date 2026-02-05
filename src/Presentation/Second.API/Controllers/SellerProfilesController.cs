@@ -32,6 +32,7 @@ namespace Second.API.Controllers
         }
 
         [HttpGet("{sellerProfileId:guid}")]
+        [ActionName(nameof(GetByIdAsync))]
         public async Task<ActionResult<SellerProfileDto>> GetByIdAsync(
             Guid sellerProfileId,
             CancellationToken cancellationToken)

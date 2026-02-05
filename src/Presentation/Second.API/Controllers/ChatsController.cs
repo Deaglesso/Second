@@ -35,6 +35,7 @@ namespace Second.API.Controllers
         }
 
         [HttpGet("{chatRoomId:guid}")]
+        [ActionName(nameof(GetChatRoomAsync))]
         public async Task<ActionResult<ChatRoomDto>> GetChatRoomAsync(
             Guid chatRoomId,
             CancellationToken cancellationToken)
