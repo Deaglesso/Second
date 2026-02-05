@@ -11,4 +11,7 @@
   <Folder Name="/src/Presentation/">
     <Project Path="src/Presentation/Second.API/Second.API.csproj" />
   </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Second.Persistence.Tests/Second.Persistence.Tests.csproj" />
+  </Folder>
 </Solution>
