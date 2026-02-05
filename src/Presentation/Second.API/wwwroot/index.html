@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Second Demo</title>
+    <link rel="stylesheet" href="app.css" />
+  </head>
+  <body>
+    <header class="hero">
+      <div>
+        <p class="eyebrow">Second · Demo</p>
+        <h1>Marketplace API Preview</h1>
+        <p class="lede">
+          A lightweight front end to show products, sellers, chats, and reports for demo purposes.
+        </p>
+        <div class="actions">
+          <a class="primary" href="/swagger">Open API Docs</a>
+          <a class="secondary" href="#endpoints">View Endpoints</a>
+        </div>
+      </div>
+      <div class="hero-card">
+        <h2>Demo Focus</h2>
+        <ul>
+          <li>Seller profiles with optional user IDs.</li>
+          <li>Paginated product listings.</li>
+          <li>Chat rooms and message history.</li>
+          <li>Report tracking across entities.</li>
+        </ul>
+      </div>
+    </header>
+
+    <main>
+      <section class="panel">
+        <h2>Sample Data Snapshot</h2>
+        <div class="grid">
+          <article>
+            <h3>Seller</h3>
+            <p class="label">Display name</p>
+            <p>Lakefront Vintage</p>
+            <p class="label">Status</p>
+            <p>Pending review</p>
+          </article>
+          <article>
+            <h3>Product</h3>
+            <p class="label">Title</p>
+            <p>Retro Desk Lamp</p>
+            <p class="label">Price</p>
+            <p>$85</p>
+          </article>
+          <article>
+            <h3>Chat</h3>
+            <p class="label">Latest message</p>
+            <p>Is the lamp still available?</p>
+            <p class="label">Updated</p>
+            <p>Just now</p>
+          </article>
+          <article>
+            <h3>Report</h3>
+            <p class="label">Target</p>
+            <p>Product</p>
+            <p class="label">Reason</p>
+            <p>Listing accuracy</p>
+          </article>
+        </div>
+      </section>
+
+      <section id="endpoints" class="panel">
+        <h2>Key Endpoints</h2>
+        <div class="grid endpoints">
+          <div>
+            <p class="label">Products</p>
+            <code>GET /api/products/active</code>
+            <code>GET /api/products/by-seller/{sellerProfileId}</code>
+          </div>
+          <div>
+            <p class="label">Sellers</p>
+            <code>POST /api/sellerprofiles</code>
+            <code>GET /api/sellerprofiles/{sellerProfileId}</code>
+          </div>
+          <div>
+            <p class="label">Chats</p>
+            <code>GET /api/chats/by-user/{userId}</code>
+            <code>GET /api/chats/{chatRoomId}/messages</code>
+          </div>
+          <div>
+            <p class="label">Reports</p>
+            <code>GET /api/reports/by-target</code>
+            <code>GET /api/reports/by-reporter/{reporterId}</code>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <p>Second Demo UI · Powered by Second.API</p>
+    </footer>
+  </body>
+</html>

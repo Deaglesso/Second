@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -7,6 +6,7 @@ using Second.Application.Contracts.Repositories;
 using Second.Application.Contracts.Services;
 using Second.Application.Dtos;
 using Second.Application.Dtos.Requests;
+using Second.Application.Models;
 using Second.Domain.Entities;
 
 namespace Second.Persistence.Implementations.Services
@@ -52,16 +52,44 @@ namespace Second.Persistence.Implementations.Services
             return product is null ? null : MapProduct(product);
         }
 
-        public async Task<IReadOnlyList<ProductDto>> GetBySellerProfileIdAsync(Guid sellerProfileId, CancellationToken cancellationToken = default)
+        public async Task<PagedResult<ProductDto>> GetBySellerProfileIdAsync(
+            Guid sellerProfileId,
+            PageRequest pageRequest,
+            CancellationToken cancellationToken = default)
         {
-            var products = await _productRepository.GetBySellerProfileIdAsync(sellerProfileId, cancellationToken);
-            return products.Select(MapProduct).ToList();
+            var (items, totalCount) = await _productRepository.GetBySellerProfileIdAsync(
+                sellerProfileId,
+                pageRequest.Skip,
+                pageRequest.PageSize,
+                cancellationToken);
+
+            return new PagedResult<ProductDto>
+            {
+                Items = items.Select(MapProduct).ToList(),
+                PageNumber = pageRequest.PageNumber,
+                PageSize = pageRequest.PageSize,
+                TotalCount = totalCount,
+                TotalPages = (int)Math.Ceiling(totalCount / (double)pageRequest.PageSize)
+            };
         }
 
-        public async Task<IReadOnlyList<ProductDto>> GetActiveAsync(CancellationToken cancellationToken = default)
+        public async Task<PagedResult<ProductDto>> GetActiveAsync(
+            PageRequest pageRequest,
+            CancellationToken cancellationToken = default)
         {
-            var products = await _productRepository.GetActiveAsync(cancellationToken);
-            return products.Select(MapProduct).ToList();
+            var (items, totalCount) = await _productRepository.GetActiveAsync(
+                pageRequest.Skip,
+                pageRequest.PageSize,
+                cancellationToken);
+
+            return new PagedResult<ProductDto>
+            {
+                Items = items.Select(MapProduct).ToList(),
+                PageNumber = pageRequest.PageNumber,
+                PageSize = pageRequest.PageSize,
+                TotalCount = totalCount,
+                TotalPages = (int)Math.Ceiling(totalCount / (double)pageRequest.PageSize)
+            };
         }
 
         public async Task<ProductDto> UpdateAsync(UpdateProductRequest request, CancellationToken cancellationToken = default)
