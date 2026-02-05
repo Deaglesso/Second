@@ -61,6 +61,13 @@ namespace Second.Persistence.Implementations.Services
 
         public async Task<MessageDto> SendMessageAsync(SendMessageRequest request, CancellationToken cancellationToken = default)
         {
+            var chatRoom = await _chatRoomRepository.GetByIdAsync(request.ChatRoomId, cancellationToken);
+
+            if (chatRoom is null)
+            {
+                throw new InvalidOperationException($"Chat room {request.ChatRoomId} was not found.");
+            }
+
             var message = new Message
             {
                 ChatRoomId = request.ChatRoomId,
