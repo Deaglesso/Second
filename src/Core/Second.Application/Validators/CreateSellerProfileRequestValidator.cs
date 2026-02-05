@@ -1,21 +1,14 @@
 using FluentValidation;
-using Second.Application.Contracts.Services;
 using Second.Application.Dtos.Requests;
 
 namespace Second.Application.Validators
 {
     public sealed class CreateSellerProfileRequestValidator : AbstractValidator<CreateSellerProfileRequest>
     {
-        private readonly IEntityValidationService _validationService;
-
-        public CreateSellerProfileRequestValidator(IEntityValidationService validationService)
+        public CreateSellerProfileRequestValidator()
         {
-            _validationService = validationService;
-
             RuleFor(request => request.UserId)
-                .NotEmpty()
-                .MustAsync(UserHasNoProfileAsync)
-                .WithMessage("A seller profile already exists for this user. Update the existing profile instead.");
+                .NotEmpty();
 
             RuleFor(request => request.DisplayName)
                 .NotEmpty()
@@ -23,20 +16,6 @@ namespace Second.Application.Validators
 
             RuleFor(request => request.Bio)
                 .MaximumLength(1000);
-
-            RuleFor(request => request.DisplayName)
-                .MustAsync(DisplayNameUniqueAsync)
-                .WithMessage("Display name is already taken. Choose a different display name.");
-        }
-
-        private async Task<bool> UserHasNoProfileAsync(Guid userId, CancellationToken cancellationToken)
-        {
-            return await _validationService.SellerUserAvailableAsync(userId, cancellationToken);
-        }
-
-        private async Task<bool> DisplayNameUniqueAsync(string displayName, CancellationToken cancellationToken)
-        {
-            return await _validationService.SellerDisplayNameUniqueAsync(displayName, null, cancellationToken);
         }
     }
 }
