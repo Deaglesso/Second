@@ -1,3 +1,6 @@
+using FluentValidation;
+using FluentValidation.AspNetCore;
+using Second.Application.Validators;
 using Second.Persistence;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -7,6 +10,9 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddPersistence(builder.Configuration);
 
 builder.Services.AddControllers();
+builder.Services.AddFluentValidationAutoValidation();
+builder.Services.AddValidatorsFromAssemblyContaining<CreateProductRequestValidator>();
+builder.Services.AddProblemDetails();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 
@@ -18,6 +24,7 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
+app.UseExceptionHandler();
 app.UseHttpsRedirection();
 
 app.UseAuthorization();

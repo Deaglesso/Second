@@ -26,6 +26,7 @@ namespace Second.Persistence
             services.AddScoped<ISellerProfileService, SellerProfileService>();
             services.AddScoped<IChatService, ChatService>();
             services.AddScoped<IReportService, ReportService>();
+            services.AddScoped<IEntityValidationService, EntityValidationService>();
 
             return services;
         }
