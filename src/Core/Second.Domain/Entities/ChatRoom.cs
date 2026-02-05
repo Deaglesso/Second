@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using Second.Domain.Entities.Common;
 
+// One ChatRoom per Product + Buyer
+
 namespace Second.Domain.Entities
 {
     public class ChatRoom : BaseEntity
