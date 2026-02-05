@@ -19,13 +19,25 @@ namespace Second.Persistence.Implementations.Repositories
             _dbContext = dbContext;
         }
 
-        public async Task<IReadOnlyList<Message>> GetByChatRoomIdAsync(Guid chatRoomId, CancellationToken cancellationToken = default)
+        public async Task<(IReadOnlyList<Message> Items, int TotalCount)> GetByChatRoomIdAsync(
+            Guid chatRoomId,
+            int skip,
+            int take,
+            CancellationToken cancellationToken = default)
         {
-            return await _dbContext.Messages
+            var query = _dbContext.Messages
                 .AsNoTracking()
-                .Where(message => message.ChatRoomId == chatRoomId)
+                .Where(message => message.ChatRoomId == chatRoomId);
+
+            var totalCount = await query.CountAsync(cancellationToken);
+
+            var items = await query
                 .OrderBy(message => message.SentAt)
+                .Skip(skip)
+                .Take(take)
                 .ToListAsync(cancellationToken);
+
+            return (items, totalCount);
         }
 
         public async Task AddAsync(Message message, CancellationToken cancellationToken = default)
