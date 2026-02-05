@@ -7,9 +7,6 @@ namespace Second.Application.Validators
     {
         public CreateSellerProfileRequestValidator()
         {
-            RuleFor(request => request.UserId)
-                .NotEmpty();
-
             RuleFor(request => request.DisplayName)
                 .NotEmpty()
                 .MaximumLength(200);

@@ -21,9 +21,10 @@ namespace Second.Persistence.Implementations.Services
 
         public async Task<SellerProfileDto> CreateAsync(CreateSellerProfileRequest request, CancellationToken cancellationToken = default)
         {
+            var userId = request.UserId == Guid.Empty ? Guid.NewGuid() : request.UserId;
             var profile = new SellerProfile
             {
-                UserId = request.UserId,
+                UserId = userId,
                 DisplayName = request.DisplayName,
                 Bio = request.Bio,
                 Status = SellerStatus.Pending

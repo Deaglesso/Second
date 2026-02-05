@@ -1,9 +1,9 @@
 using System;
-using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Second.Application.Dtos;
 using Second.Application.Dtos.Requests;
+using Second.Application.Models;
 
 namespace Second.Application.Contracts.Services
 {
@@ -13,9 +13,9 @@ namespace Second.Application.Contracts.Services
 
         Task<ProductDto?> GetByIdAsync(Guid productId, CancellationToken cancellationToken = default);
 
-        Task<IReadOnlyList<ProductDto>> GetBySellerProfileIdAsync(Guid sellerProfileId, CancellationToken cancellationToken = default);
+        Task<PagedResult<ProductDto>> GetBySellerProfileIdAsync(Guid sellerProfileId, PageRequest pageRequest, CancellationToken cancellationToken = default);
 
-        Task<IReadOnlyList<ProductDto>> GetActiveAsync(CancellationToken cancellationToken = default);
+        Task<PagedResult<ProductDto>> GetActiveAsync(PageRequest pageRequest, CancellationToken cancellationToken = default);
 
         Task<ProductDto> UpdateAsync(UpdateProductRequest request, CancellationToken cancellationToken = default);
 
