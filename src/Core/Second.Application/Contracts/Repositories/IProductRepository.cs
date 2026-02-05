@@ -10,9 +10,16 @@ namespace Second.Application.Contracts.Repositories
     {
         Task<Product?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
 
-        Task<IReadOnlyList<Product>> GetBySellerProfileIdAsync(Guid sellerProfileId, CancellationToken cancellationToken = default);
+        Task<(IReadOnlyList<Product> Items, int TotalCount)> GetBySellerProfileIdAsync(
+            Guid sellerProfileId,
+            int skip,
+            int take,
+            CancellationToken cancellationToken = default);
 
-        Task<IReadOnlyList<Product>> GetActiveAsync(CancellationToken cancellationToken = default);
+        Task<(IReadOnlyList<Product> Items, int TotalCount)> GetActiveAsync(
+            int skip,
+            int take,
+            CancellationToken cancellationToken = default);
 
         Task AddAsync(Product product, CancellationToken cancellationToken = default);
 

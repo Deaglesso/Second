@@ -3,6 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Second.Application.Dtos;
 using Second.Application.Dtos.Requests;
+using Second.Application.Models;
 
 namespace Second.Application.Contracts.Services
 {
@@ -13,6 +14,8 @@ namespace Second.Application.Contracts.Services
         Task<SellerProfileDto?> GetByIdAsync(Guid sellerProfileId, CancellationToken cancellationToken = default);
 
         Task<SellerProfileDto?> GetByUserIdAsync(Guid userId, CancellationToken cancellationToken = default);
+
+        Task<PagedResult<SellerProfileDto>> GetAllAsync(PageRequest pageRequest, CancellationToken cancellationToken = default);
 
         Task<SellerProfileDto> UpdateAsync(UpdateSellerProfileRequest request, CancellationToken cancellationToken = default);
     }

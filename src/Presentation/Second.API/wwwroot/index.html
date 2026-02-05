@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Second Demo</title>
+    <link rel="stylesheet" href="app.css" />
+  </head>
+  <body>
+    <header class="hero">
+      <div>
+        <p class="eyebrow">Second · Demo</p>
+        <h1>Marketplace API Preview</h1>
+        <p class="lede">
+          A lightweight front end to show products, sellers, chats, and reports for demo purposes.
+        </p>
+        <div class="actions">
+          <a class="primary" href="/swagger">Open API Docs</a>
+          <a class="secondary" href="#demo">Run Demo Requests</a>
+        </div>
+      </div>
+      <div class="hero-card">
+        <h2>Demo Focus</h2>
+        <ul>
+          <li>Seller profiles with optional user IDs.</li>
+          <li>Paginated product listings.</li>
+          <li>Chat rooms and message history.</li>
+          <li>Report tracking across entities.</li>
+        </ul>
+      </div>
+    </header>
+
+    <main>
+      <section class="panel">
+        <h2>Sample Data Snapshot</h2>
+        <div class="grid">
+          <article>
+            <h3>Seller</h3>
+            <p class="label">Display name</p>
+            <p>Lakefront Vintage</p>
+            <p class="label">Status</p>
+            <p>Pending review</p>
+          </article>
+          <article>
+            <h3>Product</h3>
+            <p class="label">Title</p>
+            <p>Retro Desk Lamp</p>
+            <p class="label">Price</p>
+            <p>$85</p>
+          </article>
+          <article>
+            <h3>Chat</h3>
+            <p class="label">Latest message</p>
+            <p>Is the lamp still available?</p>
+            <p class="label">Updated</p>
+            <p>Just now</p>
+          </article>
+          <article>
+            <h3>Report</h3>
+            <p class="label">Target</p>
+            <p>Product</p>
+            <p class="label">Reason</p>
+            <p>Listing accuracy</p>
+          </article>
+        </div>
+      </section>
+
+      <section id="demo" class="panel">
+        <h2>Interactive Demo Requests</h2>
+        <p class="lede">
+          Use the controls below to exercise the API endpoints. Results will appear in the response
+          panels. Update IDs from your database as needed.
+        </p>
+        <div class="grid demo-grid">
+          <form class="card" data-endpoint="create-seller">
+            <h3>Create Seller Profile</h3>
+            <label>
+              Display name
+              <input name="displayName" placeholder="Lakefront Vintage" required />
+            </label>
+            <label>
+              Bio
+              <textarea name="bio" rows="3" placeholder="Curated retro finds."></textarea>
+            </label>
+            <label>
+              User ID (optional)
+              <input name="userId" placeholder="GUID or leave blank" />
+            </label>
+            <button type="submit">POST /api/sellerprofiles</button>
+          </form>
+
+          <form class="card" data-endpoint="get-seller-by-id">
+            <h3>Show Seller by ID</h3>
+            <label>
+              Seller profile ID
+              <input name="sellerProfileId" placeholder="GUID" required />
+            </label>
+            <button type="submit">GET /api/sellerprofiles/{sellerProfileId}</button>
+          </form>
+
+          <form class="card" data-endpoint="get-seller-by-user">
+            <h3>Show Seller by User</h3>
+            <label>
+              User ID
+              <input name="userId" placeholder="GUID" required />
+            </label>
+            <button type="submit">GET /api/sellerprofiles/by-user/{userId}</button>
+          </form>
+
+          <form class="card" data-endpoint="list-sellers">
+            <h3>List Sellers</h3>
+            <label>
+              Page number
+              <input name="pageNumber" type="number" min="1" value="1" />
+            </label>
+            <label>
+              Page size
+              <input name="pageSize" type="number" min="1" max="100" value="10" />
+            </label>
+            <button type="submit">GET /api/sellerprofiles</button>
+          </form>
+
+          <form class="card" data-endpoint="create-product">
+            <h3>Create Product</h3>
+            <label>
+              Seller profile ID
+              <input name="sellerProfileId" placeholder="GUID" required />
+            </label>
+            <label>
+              Title
+              <input name="title" placeholder="Retro Desk Lamp" required />
+            </label>
+            <label>
+              Price
+              <input name="priceText" placeholder="$85" required />
+            </label>
+            <label>
+              Condition
+              <select name="condition" required>
+                <option value="New">New</option>
+                <option value="LikeNew">Like New</option>
+                <option value="Used" selected>Used</option>
+                <option value="HeavilyUsed">Heavily Used</option>
+                <option value="Vintage">Vintage</option>
+              </select>
+            </label>
+            <label>
+              Description
+              <textarea name="description" rows="3" placeholder="Warm glow, great condition." required></textarea>
+            </label>
+            <label>
+              Image URLs (comma separated)
+              <input name="imageUrls" placeholder="https://..." />
+            </label>
+            <button type="submit">POST /api/products</button>
+          </form>
+
+          <form class="card" data-endpoint="list-products">
+            <h3>List Active Products</h3>
+            <label>
+              Page number
+              <input name="pageNumber" type="number" min="1" value="1" />
+            </label>
+            <label>
+              Page size
+              <input name="pageSize" type="number" min="1" max="100" value="10" />
+            </label>
+            <button type="submit">GET /api/products/active</button>
+          </form>
+
+          <form class="card" data-endpoint="list-products-by-seller">
+            <h3>List Products by Seller</h3>
+            <label>
+              Seller profile ID
+              <input name="sellerProfileId" placeholder="GUID" required />
+            </label>
+            <label>
+              Page number
+              <input name="pageNumber" type="number" min="1" value="1" />
+            </label>
+            <label>
+              Page size
+              <input name="pageSize" type="number" min="1" max="100" value="10" />
+            </label>
+            <button type="submit">GET /api/products/by-seller/{sellerProfileId}</button>
+          </form>
+
+          <form class="card" data-endpoint="start-chat">
+            <h3>Start Chat</h3>
+            <label>
+              Product ID
+              <input name="productId" placeholder="GUID" required />
+            </label>
+            <label>
+              Buyer ID
+              <input name="buyerId" placeholder="GUID" required />
+            </label>
+            <label>
+              Seller ID
+              <input name="sellerId" placeholder="GUID" required />
+            </label>
+            <button type="submit">POST /api/chats</button>
+          </form>
+
+          <form class="card" data-endpoint="send-message">
+            <h3>Send Message</h3>
+            <label>
+              Chat room ID
+              <input name="chatRoomId" placeholder="GUID" required />
+            </label>
+            <label>
+              Sender ID
+              <input name="senderId" placeholder="GUID" required />
+            </label>
+            <label>
+              Message
+              <textarea name="content" rows="3" placeholder="Is this still available?" required></textarea>
+            </label>
+            <button type="submit">POST /api/chats/{chatRoomId}/messages</button>
+          </form>
+
+          <form class="card" data-endpoint="list-chats">
+            <h3>List Chats for User</h3>
+            <label>
+              User ID
+              <input name="userId" placeholder="GUID" required />
+            </label>
+            <label>
+              Page number
+              <input name="pageNumber" type="number" min="1" value="1" />
+            </label>
+            <label>
+              Page size
+              <input name="pageSize" type="number" min="1" max="100" value="10" />
+            </label>
+            <button type="submit">GET /api/chats/by-user/{userId}</button>
+          </form>
+
+          <form class="card" data-endpoint="list-messages">
+            <h3>List Messages</h3>
+            <label>
+              Chat room ID
+              <input name="chatRoomId" placeholder="GUID" required />
+            </label>
+            <label>
+              Page number
+              <input name="pageNumber" type="number" min="1" value="1" />
+            </label>
+            <label>
+              Page size
+              <input name="pageSize" type="number" min="1" max="100" value="10" />
+            </label>
+            <button type="submit">GET /api/chats/{chatRoomId}/messages</button>
+          </form>
+
+          <form class="card" data-endpoint="create-report">
+            <h3>Create Report</h3>
+            <label>
+              Reporter ID
+              <input name="reporterId" placeholder="GUID" required />
+            </label>
+            <label>
+              Target type
+              <select name="targetType">
+                <option value="Product">Product</option>
+                <option value="Seller">Seller</option>
+                <option value="Message">Message</option>
+              </select>
+            </label>
+            <label>
+              Target ID
+              <input name="targetId" placeholder="GUID" required />
+            </label>
+            <label>
+              Reason
+              <textarea name="reason" rows="3" placeholder="Listing accuracy" required></textarea>
+            </label>
+            <button type="submit">POST /api/reports</button>
+          </form>
+
+          <form class="card" data-endpoint="list-reports-by-target">
+            <h3>Reports by Target</h3>
+            <label>
+              Target type
+              <select name="targetType">
+                <option value="Product">Product</option>
+                <option value="Seller">Seller</option>
+                <option value="Message">Message</option>
+              </select>
+            </label>
+            <label>
+              Target ID
+              <input name="targetId" placeholder="GUID" required />
+            </label>
+            <label>
+              Page number
+              <input name="pageNumber" type="number" min="1" value="1" />
+            </label>
+            <label>
+              Page size
+              <input name="pageSize" type="number" min="1" max="100" value="10" />
+            </label>
+            <button type="submit">GET /api/reports/by-target</button>
+          </form>
+
+          <form class="card" data-endpoint="list-reports-by-reporter">
+            <h3>Reports by Reporter</h3>
+            <label>
+              Reporter ID
+              <input name="reporterId" placeholder="GUID" required />
+            </label>
+            <label>
+              Page number
+              <input name="pageNumber" type="number" min="1" value="1" />
+            </label>
+            <label>
+              Page size
+              <input name="pageSize" type="number" min="1" max="100" value="10" />
+            </label>
+            <button type="submit">GET /api/reports/by-reporter/{reporterId}</button>
+          </form>
+        </div>
+
+        <div class="responses">
+          <div class="response-card">
+            <h3>Last Request</h3>
+            <pre id="request-log">Waiting for input...</pre>
+          </div>
+          <div class="response-card">
+            <h3>Response</h3>
+            <pre id="response-log">No response yet.</pre>
+          </div>
+        </div>
+      </section>
+
+      <section id="endpoints" class="panel">
+        <h2>Key Endpoints</h2>
+        <div class="grid endpoints">
+          <div>
+            <p class="label">Products</p>
+            <code>GET /api/products/active</code>
+            <code>GET /api/products/by-seller/{sellerProfileId}</code>
+          </div>
+          <div>
+            <p class="label">Sellers</p>
+            <code>POST /api/sellerprofiles</code>
+            <code>GET /api/sellerprofiles</code>
+            <code>GET /api/sellerprofiles/{sellerProfileId}</code>
+          </div>
+          <div>
+            <p class="label">Chats</p>
+            <code>GET /api/chats/by-user/{userId}</code>
+            <code>GET /api/chats/{chatRoomId}/messages</code>
+          </div>
+          <div>
+            <p class="label">Reports</p>
+            <code>GET /api/reports/by-target</code>
+            <code>GET /api/reports/by-reporter/{reporterId}</code>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <p>Second Demo UI · Powered by Second.API</p>
+    </footer>
+    <script src="app.js"></script>
+  </body>
+</html>

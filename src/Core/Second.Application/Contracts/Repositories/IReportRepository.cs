@@ -9,9 +9,18 @@ namespace Second.Application.Contracts.Repositories
 {
     public interface IReportRepository
     {
-        Task<IReadOnlyList<Report>> GetByTargetAsync(ReportTargetType targetType, Guid targetId, CancellationToken cancellationToken = default);
+        Task<(IReadOnlyList<Report> Items, int TotalCount)> GetByTargetAsync(
+            ReportTargetType targetType,
+            Guid targetId,
+            int skip,
+            int take,
+            CancellationToken cancellationToken = default);
 
-        Task<IReadOnlyList<Report>> GetByReporterAsync(Guid reporterId, CancellationToken cancellationToken = default);
+        Task<(IReadOnlyList<Report> Items, int TotalCount)> GetByReporterAsync(
+            Guid reporterId,
+            int skip,
+            int take,
+            CancellationToken cancellationToken = default);
 
         Task AddAsync(Report report, CancellationToken cancellationToken = default);
     }
