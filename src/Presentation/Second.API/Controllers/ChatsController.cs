@@ -35,6 +35,7 @@ namespace Second.API.Controllers
         }
 
         [HttpGet("{chatRoomId:guid}")]
+        [ActionName(nameof(GetChatRoomAsync))]
         public async Task<ActionResult<ChatRoomDto>> GetChatRoomAsync(
             Guid chatRoomId,
             CancellationToken cancellationToken)
@@ -70,9 +71,19 @@ namespace Second.API.Controllers
             [FromBody] SendMessageRequest request,
             CancellationToken cancellationToken)
         {
-            var updatedRequest = request with { ChatRoomId = chatRoomId };
-            var message = await _chatService.SendMessageAsync(updatedRequest, cancellationToken);
-            return Ok(message);
+            try
+            {
+                var updatedRequest = request with { ChatRoomId = chatRoomId };
+                var message = await _chatService.SendMessageAsync(updatedRequest, cancellationToken);
+                return Ok(message);
+            }
+            catch (InvalidOperationException ex)
+            {
+                _logger.LogWarning(ex, "Send message failed for chat room {ChatRoomId}.", chatRoomId);
+                return NotFound(CreateProblemDetails(
+                    "Chat room not found.",
+                    $"No chat room found with id {chatRoomId}."));
+            }
         }
 
         [HttpGet("{chatRoomId:guid}/messages")]

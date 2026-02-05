@@ -35,6 +35,7 @@ namespace Second.API.Controllers
         }
 
         [HttpGet("{productId:guid}")]
+        [ActionName(nameof(GetByIdAsync))]
         public async Task<ActionResult<ProductDto>> GetByIdAsync(Guid productId, CancellationToken cancellationToken)
         {
             var product = await _productService.GetByIdAsync(productId, cancellationToken);
