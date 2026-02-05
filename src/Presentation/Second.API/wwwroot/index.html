@@ -16,7 +16,7 @@
         </p>
         <div class="actions">
           <a class="primary" href="/swagger">Open API Docs</a>
-          <a class="secondary" href="#endpoints">View Endpoints</a>
+          <a class="secondary" href="#demo">Run Demo Requests</a>
         </div>
       </div>
       <div class="hero-card">
@@ -65,6 +65,136 @@
         </div>
       </section>
 
+      <section id="demo" class="panel">
+        <h2>Interactive Demo Requests</h2>
+        <p class="lede">
+          Use the controls below to exercise the API endpoints. Results will appear in the response
+          panels. Update IDs from your database as needed.
+        </p>
+        <div class="grid demo-grid">
+          <form class="card" data-endpoint="create-seller">
+            <h3>Create Seller Profile</h3>
+            <label>
+              Display name
+              <input name="displayName" placeholder="Lakefront Vintage" required />
+            </label>
+            <label>
+              Bio
+              <textarea name="bio" rows="3" placeholder="Curated retro finds."></textarea>
+            </label>
+            <label>
+              User ID (optional)
+              <input name="userId" placeholder="GUID or leave blank" />
+            </label>
+            <button type="submit">POST /api/sellerprofiles</button>
+          </form>
+
+          <form class="card" data-endpoint="create-product">
+            <h3>Create Product</h3>
+            <label>
+              Seller profile ID
+              <input name="sellerProfileId" placeholder="GUID" required />
+            </label>
+            <label>
+              Title
+              <input name="title" placeholder="Retro Desk Lamp" required />
+            </label>
+            <label>
+              Price
+              <input name="priceText" placeholder="$85" required />
+            </label>
+            <label>
+              Condition
+              <input name="condition" placeholder="Good" required />
+            </label>
+            <label>
+              Description
+              <textarea name="description" rows="3" placeholder="Warm glow, great condition."></textarea>
+            </label>
+            <label>
+              Image URLs (comma separated)
+              <input name="imageUrls" placeholder="https://..." />
+            </label>
+            <button type="submit">POST /api/products</button>
+          </form>
+
+          <form class="card" data-endpoint="list-products">
+            <h3>List Active Products</h3>
+            <label>
+              Page number
+              <input name="pageNumber" type="number" min="1" value="1" />
+            </label>
+            <label>
+              Page size
+              <input name="pageSize" type="number" min="1" max="100" value="10" />
+            </label>
+            <button type="submit">GET /api/products/active</button>
+          </form>
+
+          <form class="card" data-endpoint="start-chat">
+            <h3>Start Chat</h3>
+            <label>
+              Product ID
+              <input name="productId" placeholder="GUID" required />
+            </label>
+            <label>
+              Buyer ID
+              <input name="buyerId" placeholder="GUID" required />
+            </label>
+            <label>
+              Seller ID
+              <input name="sellerId" placeholder="GUID" required />
+            </label>
+            <button type="submit">POST /api/chats</button>
+          </form>
+
+          <form class="card" data-endpoint="send-message">
+            <h3>Send Message</h3>
+            <label>
+              Chat room ID
+              <input name="chatRoomId" placeholder="GUID" required />
+            </label>
+            <label>
+              Sender ID
+              <input name="senderId" placeholder="GUID" required />
+            </label>
+            <label>
+              Message
+              <textarea name="content" rows="3" placeholder="Is this still available?" required></textarea>
+            </label>
+            <button type="submit">POST /api/chats/{chatRoomId}/messages</button>
+          </form>
+
+          <form class="card" data-endpoint="list-chats">
+            <h3>List Chats for User</h3>
+            <label>
+              User ID
+              <input name="userId" placeholder="GUID" required />
+            </label>
+            <label>
+              Page number
+              <input name="pageNumber" type="number" min="1" value="1" />
+            </label>
+            <label>
+              Page size
+              <input name="pageSize" type="number" min="1" max="100" value="10" />
+            </label>
+            <button type="submit">GET /api/chats/by-user/{userId}</button>
+          </form>
+        </div>
+
+        <div class="responses">
+          <div class="response-card">
+            <h3>Last Request</h3>
+            <pre id="request-log">Waiting for input...</pre>
+          </div>
+          <div class="response-card">
+            <h3>Response</h3>
+            <pre id="response-log">No response yet.</pre>
+          </div>
+        </div>
+      </section>
+
       <section id="endpoints" class="panel">
         <h2>Key Endpoints</h2>
         <div class="grid endpoints">
@@ -95,5 +225,6 @@
     <footer>
       <p>Second Demo UI · Powered by Second.API</p>
     </footer>
+    <script src="app.js"></script>
   </body>
 </html>
