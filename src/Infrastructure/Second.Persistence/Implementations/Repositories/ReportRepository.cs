@@ -9,7 +9,7 @@ using Second.Domain.Entities;
 using Second.Domain.Enums;
 using Second.Persistence.Data;
 
-namespace Second.Persistence.Repositories
+namespace Second.Persistence.Implementations.Repositories
 {
     public class ReportRepository : IReportRepository
     {

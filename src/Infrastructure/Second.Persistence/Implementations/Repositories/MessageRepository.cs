@@ -8,7 +8,7 @@ using Second.Application.Contracts.Repositories;
 using Second.Domain.Entities;
 using Second.Persistence.Data;
 
-namespace Second.Persistence.Repositories
+namespace Second.Persistence.Implementations.Repositories
 {
     public class MessageRepository : IMessageRepository
     {

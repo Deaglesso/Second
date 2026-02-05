@@ -3,7 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Second.Application.Contracts.Repositories;
 using Second.Persistence.Data;
-using Second.Persistence.Repositories;
+using Second.Persistence.Implementations.Repositories;
 
 namespace Second.Persistence
 {
