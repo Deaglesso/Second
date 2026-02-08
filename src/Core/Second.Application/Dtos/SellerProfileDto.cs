@@ -7,7 +7,7 @@ namespace Second.Application.Dtos
     {
         public Guid Id { get; init; }
 
-        public Guid UserId { get; init; }
+        public Guid? UserId { get; init; }
 
         public string DisplayName { get; init; } = string.Empty;
 
