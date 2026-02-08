@@ -10,8 +10,8 @@ namespace Second.Application.Contracts.Repositories
     {
         Task<Product?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
 
-        Task<(IReadOnlyList<Product> Items, int TotalCount)> GetBySellerProfileIdAsync(
-            Guid sellerProfileId,
+        Task<(IReadOnlyList<Product> Items, int TotalCount)> GetBySellerUserIdAsync(
+            Guid sellerUserId,
             int skip,
             int take,
             CancellationToken cancellationToken = default);

@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Second.Domain.Entities.Common;
 using Second.Domain.Enums;
 
@@ -12,6 +13,16 @@ namespace Second.Domain.Entities
         public UserRole Role { get; set; } = UserRole.User;
 
         public bool EmailVerified { get; set; }
+
+        public string? EmailVerificationTokenHash { get; set; }
+
+        public System.DateTime? EmailVerificationTokenExpiresAtUtc { get; set; }
+
+        public string? PasswordResetTokenHash { get; set; }
+
+        public System.DateTime? PasswordResetTokenExpiresAtUtc { get; set; }
+
+        public ICollection<Product> Products { get; set; } = new List<Product>();
 
         public bool IsSeller()
         {

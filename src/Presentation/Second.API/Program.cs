@@ -1,9 +1,11 @@
+using System.IdentityModel.Tokens.Jwt;
 using System.Text;
 using System.Text.Json.Serialization;
 using FluentValidation;
 using FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
+using Second.Application.Contracts.Services;
 using Second.Persistence;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -26,6 +28,25 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidIssuer = issuer,
             ValidAudience = audience,
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(key))
+        };
+
+        options.Events = new JwtBearerEvents
+        {
+            OnTokenValidated = async context =>
+            {
+                var jti = context.Principal?.FindFirst(JwtRegisteredClaimNames.Jti)?.Value;
+                if (string.IsNullOrWhiteSpace(jti))
+                {
+                    context.Fail("Token does not include jti.");
+                    return;
+                }
+
+                var revocationService = context.HttpContext.RequestServices.GetRequiredService<ITokenRevocationService>();
+                if (await revocationService.IsRevokedAsync(jti, context.HttpContext.RequestAborted))
+                {
+                    context.Fail("Token has been revoked.");
+                }
+            }
         };
     });
 

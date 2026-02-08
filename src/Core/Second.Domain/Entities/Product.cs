@@ -7,7 +7,7 @@ namespace Second.Domain.Entities
 {
     public class Product : BaseEntity
     {
-        public Guid SellerProfileId { get; set; }
+        public Guid SellerUserId { get; set; }
 
         public string Title { get; set; } = string.Empty;
 
@@ -19,7 +19,7 @@ namespace Second.Domain.Entities
 
         public bool IsActive { get; set; }
 
-        public SellerProfile? SellerProfile { get; set; }
+        public User? SellerUser { get; set; }
 
         public ICollection<ChatRoom> ChatRooms { get; set; } = new List<ChatRoom>();
 

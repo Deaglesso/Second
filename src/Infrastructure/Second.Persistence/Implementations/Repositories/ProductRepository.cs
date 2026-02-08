@@ -23,13 +23,13 @@ namespace Second.Persistence.Implementations.Repositories
         {
             return await _dbContext.Products
                 .Include(product => product.Images)
-                .Include(product => product.SellerProfile)
+                .Include(product => product.SellerUser)
                 .AsNoTracking()
                 .FirstOrDefaultAsync(product => product.Id == id, cancellationToken);
         }
 
-        public async Task<(IReadOnlyList<Product> Items, int TotalCount)> GetBySellerProfileIdAsync(
-            Guid sellerProfileId,
+        public async Task<(IReadOnlyList<Product> Items, int TotalCount)> GetBySellerUserIdAsync(
+            Guid sellerUserId,
             int skip,
             int take,
             CancellationToken cancellationToken = default)
@@ -37,7 +37,7 @@ namespace Second.Persistence.Implementations.Repositories
             var query = _dbContext.Products
                 .Include(product => product.Images)
                 .AsNoTracking()
-                .Where(product => product.SellerProfileId == sellerProfileId);
+                .Where(product => product.SellerUserId == sellerUserId);
 
             var totalCount = await query.CountAsync(cancellationToken);
 
