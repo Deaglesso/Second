@@ -21,6 +21,11 @@ namespace Second.Persistence.Data.Configurations
             builder.Property(product => product.PriceText)
                 .HasMaxLength(100);
 
+            builder.HasOne(product => product.SellerUser)
+                .WithMany(user => user.Products)
+                .HasForeignKey(product => product.SellerUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
             builder.HasMany(product => product.Images)
                 .WithOne(image => image.Product)
                 .HasForeignKey(image => image.ProductId)

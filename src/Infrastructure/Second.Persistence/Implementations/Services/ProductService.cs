@@ -30,16 +30,16 @@ namespace Second.Persistence.Implementations.Services
         public async Task<ProductDto> CreateAsync(CreateProductRequest request, CancellationToken cancellationToken = default)
         {
             var sellerExists = await _entityValidationService
-                .SellerProfileExistsAsync(request.SellerProfileId, cancellationToken);
+                .SellerUserExistsAsync(request.SellerUserId, cancellationToken);
 
             if (!sellerExists)
             {
-                throw new InvalidOperationException($"Seller profile {request.SellerProfileId} was not found.");
+                throw new InvalidOperationException($"Seller user {request.SellerUserId} was not found.");
             }
 
             var product = new Product
             {
-                SellerProfileId = request.SellerProfileId,
+                SellerUserId = request.SellerUserId,
                 Title = request.Title,
                 Description = request.Description,
                 PriceText = request.PriceText,
@@ -68,13 +68,13 @@ namespace Second.Persistence.Implementations.Services
             return product is null ? null : MapProduct(product);
         }
 
-        public async Task<PagedResult<ProductDto>> GetBySellerProfileIdAsync(
-            Guid sellerProfileId,
+        public async Task<PagedResult<ProductDto>> GetBySellerUserIdAsync(
+            Guid sellerUserId,
             PageRequest pageRequest,
             CancellationToken cancellationToken = default)
         {
-            var (items, totalCount) = await _productRepository.GetBySellerProfileIdAsync(
-                sellerProfileId,
+            var (items, totalCount) = await _productRepository.GetBySellerUserIdAsync(
+                sellerUserId,
                 pageRequest.Skip,
                 pageRequest.PageSize,
                 cancellationToken);
@@ -166,7 +166,7 @@ namespace Second.Persistence.Implementations.Services
             return new ProductDto
             {
                 Id = product.Id,
-                SellerProfileId = product.SellerProfileId,
+                SellerUserId = product.SellerUserId,
                 Title = product.Title,
                 Description = product.Description,
                 PriceText = product.PriceText,

@@ -8,7 +8,7 @@ namespace Second.Application.Dtos
     {
         public Guid Id { get; init; }
 
-        public Guid SellerProfileId { get; init; }
+        public Guid SellerUserId { get; init; }
 
         public string Title { get; init; } = string.Empty;
 

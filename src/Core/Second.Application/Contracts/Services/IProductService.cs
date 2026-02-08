@@ -13,7 +13,7 @@ namespace Second.Application.Contracts.Services
 
         Task<ProductDto?> GetByIdAsync(Guid productId, CancellationToken cancellationToken = default);
 
-        Task<PagedResult<ProductDto>> GetBySellerProfileIdAsync(Guid sellerProfileId, PageRequest pageRequest, CancellationToken cancellationToken = default);
+        Task<PagedResult<ProductDto>> GetBySellerUserIdAsync(Guid sellerUserId, PageRequest pageRequest, CancellationToken cancellationToken = default);
 
         Task<PagedResult<ProductDto>> GetActiveAsync(PageRequest pageRequest, CancellationToken cancellationToken = default);
 
