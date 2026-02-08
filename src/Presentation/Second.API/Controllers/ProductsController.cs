@@ -46,6 +46,7 @@ namespace Second.API.Controllers
         }
 
         [HttpGet("{productId:guid}")]
+        [AllowAnonymous]
         [ActionName(nameof(GetByIdAsync))]
         public async Task<ActionResult<ProductDto>> GetByIdAsync(Guid productId, CancellationToken cancellationToken)
         {
@@ -59,6 +60,7 @@ namespace Second.API.Controllers
         }
 
         [HttpGet("active")]
+        [AllowAnonymous]
         public async Task<ActionResult<PagedResult<ProductDto>>> GetActiveAsync(
             [FromQuery] PaginationParameters pagination,
             CancellationToken cancellationToken)

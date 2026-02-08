@@ -42,24 +42,12 @@ const getJson = async (url) => {
 };
 
 const handlers = {
-  "create-seller": async (form) => {
-    const payload = {
-      displayName: form.displayName.value,
-      bio: form.bio.value || null,
-    };
-    if (form.userId.value.trim()) {
-      payload.userId = form.userId.value.trim();
-    }
-    const endpoint = "/api/sellerprofiles";
-    setLog(requestLog, { method: "POST", endpoint, payload });
-    return postJson(endpoint, payload);
-  },
   "create-product": async (form) => {
     const imageUrls = form.imageUrls.value
       ? form.imageUrls.value.split(",").map((item) => item.trim()).filter(Boolean)
       : [];
     const payload = {
-      sellerProfileId: form.sellerProfileId.value,
+      sellerUserId: form.sellerUserId.value,
       title: form.title.value,
       priceText: form.priceText.value,
       condition: form.condition.value,

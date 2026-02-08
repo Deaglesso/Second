@@ -1,3 +1,4 @@
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Second.Application.Dtos;
@@ -11,6 +12,18 @@ namespace Second.Application.Contracts.Services
 
         Task<AuthResponseDto> LoginAsync(LoginRequest request, CancellationToken cancellationToken = default);
 
-        Task<UserDto?> GetUserByIdAsync(System.Guid userId, CancellationToken cancellationToken = default);
+        Task<UserDto?> GetUserByIdAsync(Guid userId, CancellationToken cancellationToken = default);
+
+        Task<AuthResponseDto> BecomeSellerAsync(Guid userId, CancellationToken cancellationToken = default);
+
+        Task LogoutAsync(string jti, DateTime expiresAtUtc, CancellationToken cancellationToken = default);
+
+        Task RequestEmailVerificationAsync(RequestEmailVerificationRequest request, CancellationToken cancellationToken = default);
+
+        Task<bool> VerifyEmailAsync(VerifyEmailRequest request, CancellationToken cancellationToken = default);
+
+        Task RequestPasswordResetAsync(ForgotPasswordRequest request, CancellationToken cancellationToken = default);
+
+        Task ResetPasswordAsync(ResetPasswordRequest request, CancellationToken cancellationToken = default);
     }
 }
