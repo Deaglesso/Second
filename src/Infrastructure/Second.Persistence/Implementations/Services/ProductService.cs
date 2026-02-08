@@ -15,15 +15,28 @@ namespace Second.Persistence.Implementations.Services
     {
         private readonly IProductRepository _productRepository;
         private readonly IProductImageRepository _productImageRepository;
+        private readonly IEntityValidationService _entityValidationService;
 
-        public ProductService(IProductRepository productRepository, IProductImageRepository productImageRepository)
+        public ProductService(
+            IProductRepository productRepository,
+            IProductImageRepository productImageRepository,
+            IEntityValidationService entityValidationService)
         {
             _productRepository = productRepository;
             _productImageRepository = productImageRepository;
+            _entityValidationService = entityValidationService;
         }
 
         public async Task<ProductDto> CreateAsync(CreateProductRequest request, CancellationToken cancellationToken = default)
         {
+            var sellerExists = await _entityValidationService
+                .SellerProfileExistsAsync(request.SellerProfileId, cancellationToken);
+
+            if (!sellerExists)
+            {
+                throw new InvalidOperationException($"Seller profile {request.SellerProfileId} was not found.");
+            }
+
             var product = new Product
             {
                 SellerProfileId = request.SellerProfileId,
@@ -31,15 +44,18 @@ namespace Second.Persistence.Implementations.Services
                 Description = request.Description,
                 PriceText = request.PriceText,
                 Condition = request.Condition,
-                IsActive = true,
-                Images = request.ImageUrls
-                    .Select((url, index) => new ProductImage
-                    {
-                        ImageUrl = url,
-                        Order = index
-                    })
-                    .ToList()
+                IsActive = true
             };
+
+            foreach (var (url, index) in request.ImageUrls.Select((imageUrl, order) => (imageUrl, order)))
+            {
+                product.Images.Add(new ProductImage
+                {
+                    ImageUrl = url,
+                    Order = index,
+                    Product = product
+                });
+            }
 
             await _productRepository.AddAsync(product, cancellationToken);
 
