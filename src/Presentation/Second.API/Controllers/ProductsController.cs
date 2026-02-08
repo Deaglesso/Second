@@ -29,8 +29,18 @@ namespace Second.API.Controllers
             [FromBody] CreateProductRequest request,
             CancellationToken cancellationToken)
         {
-            var product = await _productService.CreateAsync(request, cancellationToken);
-            return CreatedAtAction(nameof(GetByIdAsync), new { productId = product.Id }, product);
+            try
+            {
+                var product = await _productService.CreateAsync(request, cancellationToken);
+                return CreatedAtAction(nameof(GetByIdAsync), new { productId = product.Id }, product);
+            }
+            catch (InvalidOperationException ex)
+            {
+                _logger.LogWarning(ex, "Product create failed for SellerProfileId {SellerProfileId}.", request.SellerProfileId);
+                return NotFound(CreateProblemDetails(
+                    "Seller profile not found.",
+                    $"No seller profile found with id {request.SellerProfileId}."));
+            }
         }
 
         [HttpGet("{productId:guid}")]
