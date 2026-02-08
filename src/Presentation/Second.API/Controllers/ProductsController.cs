@@ -1,6 +1,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Second.API.Models;
@@ -25,6 +26,7 @@ namespace Second.API.Controllers
         }
 
         [HttpPost]
+        [Authorize(Policy = "SellerOnly")]
         public async Task<ActionResult<ProductDto>> CreateAsync(
             [FromBody] CreateProductRequest request,
             CancellationToken cancellationToken)
@@ -90,6 +92,7 @@ namespace Second.API.Controllers
         }
 
         [HttpPut("{productId:guid}")]
+        [Authorize(Policy = "SellerOnly")]
         public async Task<ActionResult<ProductDto>> UpdateAsync(
             Guid productId,
             [FromBody] UpdateProductRequest request,
@@ -109,6 +112,7 @@ namespace Second.API.Controllers
         }
 
         [HttpPost("{productId:guid}/images")]
+        [Authorize(Policy = "SellerOnly")]
         public async Task<ActionResult<ProductImageDto>> AddImageAsync(
             Guid productId,
             [FromBody] AddProductImageRequest request,
@@ -128,6 +132,7 @@ namespace Second.API.Controllers
         }
 
         [HttpDelete("images/{imageId:guid}")]
+        [Authorize(Policy = "SellerOnly")]
         public async Task<IActionResult> RemoveImageAsync(Guid imageId, CancellationToken cancellationToken)
         {
             await _productService.RemoveImageAsync(imageId, cancellationToken);

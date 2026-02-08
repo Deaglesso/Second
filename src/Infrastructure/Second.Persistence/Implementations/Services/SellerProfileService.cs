@@ -15,18 +15,28 @@ namespace Second.Persistence.Implementations.Services
     public class SellerProfileService : ISellerProfileService
     {
         private readonly ISellerProfileRepository _sellerProfileRepository;
+        private readonly IUserRepository _userRepository;
 
-        public SellerProfileService(ISellerProfileRepository sellerProfileRepository)
+        public SellerProfileService(ISellerProfileRepository sellerProfileRepository, IUserRepository userRepository)
         {
             _sellerProfileRepository = sellerProfileRepository;
+            _userRepository = userRepository;
         }
 
         public async Task<SellerProfileDto> CreateAsync(CreateSellerProfileRequest request, CancellationToken cancellationToken = default)
         {
-            var userId = request.UserId == Guid.Empty ? Guid.NewGuid() : request.UserId;
+            var user = await _userRepository.GetByIdAsync(request.UserId, cancellationToken: cancellationToken);
+            if (user is null)
+            {
+                throw new InvalidOperationException("User not found.");
+            }
+
+            user.Role = UserRole.Seller;
+            await _userRepository.UpdateAsync(user, cancellationToken);
+
             var profile = new SellerProfile
             {
-                UserId = userId,
+                UserId = request.UserId,
                 DisplayName = request.DisplayName,
                 Bio = request.Bio,
                 Status = SellerStatus.Pending
