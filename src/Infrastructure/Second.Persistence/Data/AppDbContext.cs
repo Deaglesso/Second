@@ -22,7 +22,6 @@ namespace Second.Persistence.Data
 
         public DbSet<ProductImage> ProductImages => Set<ProductImage>();
 
-        public DbSet<SellerProfile> SellerProfiles => Set<SellerProfile>();
 
         public DbSet<ChatRoom> ChatRooms => Set<ChatRoom>();
 
@@ -33,7 +32,6 @@ namespace Second.Persistence.Data
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.ApplyConfiguration(new UserConfiguration());
-            modelBuilder.ApplyConfiguration(new SellerProfileConfiguration());
             modelBuilder.ApplyConfiguration(new ProductConfiguration());
             modelBuilder.ApplyConfiguration(new ProductImageConfiguration());
             modelBuilder.ApplyConfiguration(new ChatRoomConfiguration());
