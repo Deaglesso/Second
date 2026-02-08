@@ -14,14 +14,6 @@ namespace Second.Domain.Entities
 
         public bool EmailVerified { get; set; }
 
-        public string? EmailVerificationTokenHash { get; set; }
-
-        public System.DateTime? EmailVerificationTokenExpiresAtUtc { get; set; }
-
-        public string? PasswordResetTokenHash { get; set; }
-
-        public System.DateTime? PasswordResetTokenExpiresAtUtc { get; set; }
-
         public ICollection<Product> Products { get; set; } = new List<Product>();
 
         public bool IsSeller()
