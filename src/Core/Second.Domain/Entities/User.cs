@@ -4,7 +4,7 @@ using Second.Domain.Enums;
 
 namespace Second.Domain.Entities
 {
-    public class User : BaseEntity
+    public partial class User : BaseEntity
     {
         public string Email { get; set; } = string.Empty;
 
