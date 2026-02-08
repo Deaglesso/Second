@@ -38,10 +38,10 @@ namespace Second.API.Controllers
             }
             catch (InvalidOperationException ex)
             {
-                _logger.LogWarning(ex, "Product create failed for SellerProfileId {SellerProfileId}.", request.SellerProfileId);
+                _logger.LogWarning(ex, "Product create failed for SellerUserId {SellerUserId}.", request.SellerUserId);
                 return NotFound(CreateProblemDetails(
-                    "Seller profile not found.",
-                    $"No seller profile found with id {request.SellerProfileId}."));
+                    "Seller user not found.",
+                    $"No seller user found with id {request.SellerUserId}."));
             }
         }
 
@@ -74,9 +74,9 @@ namespace Second.API.Controllers
             return Ok(products);
         }
 
-        [HttpGet("by-seller/{sellerProfileId:guid}")]
+        [HttpGet("by-seller/{sellerUserId:guid}")]
         public async Task<ActionResult<PagedResult<ProductDto>>> GetBySellerAsync(
-            Guid sellerProfileId,
+            Guid sellerUserId,
             [FromQuery] PaginationParameters pagination,
             CancellationToken cancellationToken)
         {
@@ -87,7 +87,7 @@ namespace Second.API.Controllers
             }
 
             var pageRequest = new PageRequest { PageNumber = pagination.PageNumber, PageSize = pagination.PageSize };
-            var products = await _productService.GetBySellerProfileIdAsync(sellerProfileId, pageRequest, cancellationToken);
+            var products = await _productService.GetBySellerUserIdAsync(sellerUserId, pageRequest, cancellationToken);
             return Ok(products);
         }
 
