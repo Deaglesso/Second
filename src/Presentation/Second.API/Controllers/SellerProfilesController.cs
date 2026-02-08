@@ -1,6 +1,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Second.API.Models;
@@ -25,6 +26,7 @@ namespace Second.API.Controllers
         }
 
         [HttpPost]
+        [Authorize]
         public async Task<ActionResult<SellerProfileDto>> CreateAsync(
             [FromBody] CreateSellerProfileRequest request,
             CancellationToken cancellationToken)
@@ -81,6 +83,7 @@ namespace Second.API.Controllers
         }
 
         [HttpPut("{sellerProfileId:guid}")]
+        [Authorize(Policy = "SellerOnly")]
         public async Task<ActionResult<SellerProfileDto>> UpdateAsync(
             Guid sellerProfileId,
             [FromBody] UpdateSellerProfileRequest request,

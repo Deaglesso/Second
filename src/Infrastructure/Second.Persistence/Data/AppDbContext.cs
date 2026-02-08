@@ -1,4 +1,5 @@
 using System;
+using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
@@ -15,6 +16,8 @@ namespace Second.Persistence.Data
         {
         }
 
+        public DbSet<User> Users => Set<User>();
+
         public DbSet<Product> Products => Set<Product>();
 
         public DbSet<ProductImage> ProductImages => Set<ProductImage>();
@@ -29,12 +32,15 @@ namespace Second.Persistence.Data
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
+            modelBuilder.ApplyConfiguration(new UserConfiguration());
             modelBuilder.ApplyConfiguration(new SellerProfileConfiguration());
             modelBuilder.ApplyConfiguration(new ProductConfiguration());
             modelBuilder.ApplyConfiguration(new ProductImageConfiguration());
             modelBuilder.ApplyConfiguration(new ChatRoomConfiguration());
             modelBuilder.ApplyConfiguration(new MessageConfiguration());
             modelBuilder.ApplyConfiguration(new ReportConfiguration());
+
+            ApplySoftDeleteQueryFilters(modelBuilder);
 
             base.OnModelCreating(modelBuilder);
         }
@@ -49,14 +55,39 @@ namespace Second.Persistence.Data
                 {
                     entry.Entity.CreatedAt = utcNow;
                     entry.Entity.UpdatedAt = null;
+                    entry.Entity.IsDeleted = false;
+                    entry.Entity.DeletedAt = null;
                 }
                 else if (entry.State == EntityState.Modified)
                 {
                     entry.Entity.UpdatedAt = utcNow;
                 }
+                else if (entry.State == EntityState.Deleted)
+                {
+                    entry.State = EntityState.Modified;
+                    entry.Entity.SoftDelete(utcNow);
+                }
             }
 
             return base.SaveChangesAsync(cancellationToken);
+        }
+
+        private static void ApplySoftDeleteQueryFilters(ModelBuilder modelBuilder)
+        {
+            foreach (var entityType in modelBuilder.Model.GetEntityTypes())
+            {
+                if (!typeof(BaseEntity).IsAssignableFrom(entityType.ClrType))
+                {
+                    continue;
+                }
+
+                var parameter = Expression.Parameter(entityType.ClrType, "entity");
+                var isDeletedProperty = Expression.Property(parameter, nameof(BaseEntity.IsDeleted));
+                var isNotDeletedExpression = Expression.Equal(isDeletedProperty, Expression.Constant(false));
+                var lambda = Expression.Lambda(isNotDeletedExpression, parameter);
+
+                modelBuilder.Entity(entityType.ClrType).HasQueryFilter(lambda);
+            }
         }
     }
 }
