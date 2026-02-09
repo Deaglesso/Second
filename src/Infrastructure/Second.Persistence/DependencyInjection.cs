@@ -20,7 +20,13 @@ namespace Second.Persistence
                 options.UseSqlServer(configuration.GetConnectionString("DefaultConnection")));
 
             var redisConnectionString = configuration["Redis:ConnectionString"] ?? "localhost:6379";
-            services.AddSingleton<IConnectionMultiplexer>(_ => ConnectionMultiplexer.Connect(redisConnectionString));
+            services.AddSingleton<IConnectionMultiplexer>(_ =>
+            {
+                var redisOptions = ConfigurationOptions.Parse(redisConnectionString);
+                redisOptions.AbortOnConnectFail = false;
+
+                return ConnectionMultiplexer.Connect(redisOptions);
+            });
 
             services.AddScoped<IUserRepository, UserRepository>();
             services.AddScoped<IProductRepository, ProductRepository>();
