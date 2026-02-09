@@ -19,6 +19,9 @@ namespace Second.Persistence
             services.AddDbContext<AppDbContext>(options =>
                 options.UseSqlServer(configuration.GetConnectionString("DefaultConnection")));
 
+            var redisConnectionString = configuration["Redis:ConnectionString"] ?? "localhost:6379";
+            services.AddSingleton<IConnectionMultiplexer>(_ => ConnectionMultiplexer.Connect(redisConnectionString));
+
             services.AddScoped<IUserRepository, UserRepository>();
             services.AddScoped<IProductRepository, ProductRepository>();
             services.AddScoped<IProductImageRepository, ProductImageRepository>();
@@ -28,22 +31,7 @@ namespace Second.Persistence
 
             services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
             services.AddScoped<ITokenService, TokenService>();
-            services.AddSingleton<ITokenRevocationService>(_ =>
-            {
-                var redisConnectionString = configuration["Redis:ConnectionString"] ?? "localhost:6379,abortConnect=false";
-
-                try
-                {
-                    var options = ConfigurationOptions.Parse(redisConnectionString);
-                    options.AbortOnConnectFail = false;
-                    var multiplexer = ConnectionMultiplexer.Connect(options);
-                    return new RedisTokenRevocationService(multiplexer);
-                }
-                catch
-                {
-                    return new NoOpTokenRevocationService();
-                }
-            });
+            services.AddScoped<ITokenRevocationService, RedisTokenRevocationService>();
             services.AddScoped<IEmailSender, LogEmailSender>();
             services.AddScoped<IAuthService, AuthService>();
             services.AddScoped<IUserAuthorizationService, UserAuthorizationService>();

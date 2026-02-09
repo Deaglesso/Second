@@ -34,14 +34,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         {
             OnTokenValidated = async context =>
             {
-                var principal = context.Principal;
-                if (principal is null)
-                {
-                    context.Fail("Token principal is missing.");
-                    return;
-                }
-
-                var jti = principal.FindFirst(JwtRegisteredClaimNames.Jti)?.Value;
+                var jti = context.Principal?.FindFirst(JwtRegisteredClaimNames.Jti)?.Value;
                 if (string.IsNullOrWhiteSpace(jti))
                 {
                     context.Fail("Token does not include jti.");
