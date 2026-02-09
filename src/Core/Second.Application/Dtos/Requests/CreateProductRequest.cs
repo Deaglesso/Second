@@ -6,7 +6,7 @@ namespace Second.Application.Dtos.Requests
 {
     public sealed record CreateProductRequest
     {
-        public Guid SellerProfileId { get; init; }
+        public Guid SellerUserId { get; init; }
 
         public string Title { get; init; } = string.Empty;
 

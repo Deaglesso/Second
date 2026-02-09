@@ -1,0 +1,10 @@
+using System.Threading;
+using System.Threading.Tasks;
+
+namespace Second.Application.Contracts.Services
+{
+    public interface IEmailSender
+    {
+        Task SendAsync(string toEmail, string subject, string body, CancellationToken cancellationToken = default);
+    }
+}

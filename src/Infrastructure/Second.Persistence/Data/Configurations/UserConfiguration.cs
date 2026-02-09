@@ -25,6 +25,12 @@ namespace Second.Persistence.Data.Configurations
 
             builder.Property(user => user.Role)
                 .IsRequired();
+
+            builder.Property(user => user.EmailVerificationTokenHash)
+                .HasMaxLength(256);
+
+            builder.Property(user => user.PasswordResetTokenHash)
+                .HasMaxLength(256);
         }
     }
 }
