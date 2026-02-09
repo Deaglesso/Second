@@ -5,7 +5,7 @@ using Second.Application.Contracts.Services;
 
 namespace Second.Persistence.Implementations.Services
 {
-    public class LogEmailSender : IEmailSender
+    public sealed class LogEmailSender : IEmailSender
     {
         private readonly ILogger<LogEmailSender> _logger;
 
@@ -16,7 +16,10 @@ namespace Second.Persistence.Implementations.Services
 
         public Task SendAsync(string toEmail, string subject, string body, CancellationToken cancellationToken = default)
         {
-            _logger.LogInformation("Email dispatch to {ToEmail}. Subject: {Subject}. Body: {Body}", toEmail, subject, body);
+            _logger.LogWarning(
+                "Email is not enabled. Skipping delivery to {ToEmail}. Subject: {Subject}",
+                toEmail,
+                subject);
             return Task.CompletedTask;
         }
     }
