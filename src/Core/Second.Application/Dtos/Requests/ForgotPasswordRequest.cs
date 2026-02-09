@@ -1,9 +1,7 @@
 namespace Second.Application.Dtos.Requests
 {
-    public sealed record RegisterUserRequest
+    public sealed record ForgotPasswordRequest
     {
         public string Email { get; init; } = string.Empty;
-
-        public string Password { get; init; } = string.Empty;
     }
 }

@@ -7,23 +7,19 @@ namespace Second.Application.Contracts.Services
 {
     public interface IEntityValidationService
     {
-        Task<bool> SellerProfileExistsAsync(Guid sellerProfileId, CancellationToken cancellationToken = default);
+        Task<bool> SellerUserExistsAsync(Guid sellerUserId, CancellationToken cancellationToken = default);
 
         Task<bool> ProductExistsAsync(Guid productId, CancellationToken cancellationToken = default);
 
-        Task<bool> ProductTitleUniqueForSellerAsync(Guid sellerProfileId, string title, Guid? excludedProductId, CancellationToken cancellationToken = default);
+        Task<bool> ProductTitleUniqueForSellerAsync(Guid sellerUserId, string title, Guid? excludedProductId, CancellationToken cancellationToken = default);
 
-        Task<bool> SellerHasCapacityForActiveListingAsync(Guid sellerProfileId, int maxActiveListings, Guid? excludedProductId, CancellationToken cancellationToken = default);
+        Task<bool> SellerHasCapacityForActiveListingAsync(Guid sellerUserId, int maxActiveListings, Guid? excludedProductId, CancellationToken cancellationToken = default);
 
-        Task<Guid?> GetSellerProfileIdForProductAsync(Guid productId, CancellationToken cancellationToken = default);
+        Task<Guid?> GetSellerUserIdForProductAsync(Guid productId, CancellationToken cancellationToken = default);
 
         Task<bool> ProductImageOrderUniqueAsync(Guid productId, int order, CancellationToken cancellationToken = default);
 
         Task<bool> ProductHasImageCapacityAsync(Guid productId, int maxImages, CancellationToken cancellationToken = default);
-
-        Task<bool> SellerUserAvailableAsync(Guid userId, CancellationToken cancellationToken = default);
-
-        Task<bool> SellerDisplayNameUniqueAsync(string displayName, Guid? excludedSellerProfileId, CancellationToken cancellationToken = default);
 
         Task<bool> ProductIsActiveAsync(Guid productId, CancellationToken cancellationToken = default);
 

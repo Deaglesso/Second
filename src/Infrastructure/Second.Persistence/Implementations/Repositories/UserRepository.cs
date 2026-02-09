@@ -32,6 +32,18 @@ namespace Second.Persistence.Implementations.Repositories
             return await query.FirstOrDefaultAsync(user => user.Email == normalizedEmail, cancellationToken);
         }
 
+        public async Task<User?> GetByEmailVerificationTokenHashAsync(string tokenHash, CancellationToken cancellationToken = default)
+        {
+            return await _dbContext.Users
+                .FirstOrDefaultAsync(user => user.EmailVerificationTokenHash == tokenHash, cancellationToken);
+        }
+
+        public async Task<User?> GetByPasswordResetTokenHashAsync(string tokenHash, CancellationToken cancellationToken = default)
+        {
+            return await _dbContext.Users
+                .FirstOrDefaultAsync(user => user.PasswordResetTokenHash == tokenHash, cancellationToken);
+        }
+
         public async Task<IReadOnlyList<User>> GetDeletedUsersAsync(CancellationToken cancellationToken = default)
         {
             return await _dbContext.Users

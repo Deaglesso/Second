@@ -12,7 +12,7 @@
         <p class="eyebrow">Second · Demo</p>
         <h1>Marketplace API Preview</h1>
         <p class="lede">
-          A lightweight front end to show products, sellers, chats, and reports for demo purposes.
+          A lightweight front end to show anonymous browsing plus authenticated product, chat, and report flows.
         </p>
         <div class="actions">
           <a class="primary" href="/swagger">Open API Docs</a>
@@ -22,7 +22,8 @@
       <div class="hero-card">
         <h2>Demo Focus</h2>
         <ul>
-          <li>Seller profiles with optional user IDs.</li>
+          <li>Anonymous visitors can browse public listings without an account.</li>
+          <li>Registered users start as User and can become Seller later.</li>
           <li>Paginated product listings.</li>
           <li>Chat rooms and message history.</li>
           <li>Report tracking across entities.</li>
@@ -38,8 +39,8 @@
             <h3>Seller</h3>
             <p class="label">Display name</p>
             <p>Lakefront Vintage</p>
-            <p class="label">Status</p>
-            <p>Pending review</p>
+            <p class="label">Role</p>
+            <p>Seller</p>
           </article>
           <article>
             <h3>Product</h3>
@@ -68,32 +69,17 @@
       <section id="demo" class="panel">
         <h2>Interactive Demo Requests</h2>
         <p class="lede">
-          Use the controls below to exercise the API endpoints. Results will appear in the response
-          panels. Update IDs from your database as needed.
+          Use the controls below to exercise API endpoints. Anonymous visitors can use read-only endpoints;
+          update IDs from your database for authenticated flows.
         </p>
         <div class="grid demo-grid">
-          <form class="card" data-endpoint="create-seller">
-            <h3>Create Seller Profile</h3>
-            <label>
-              Display name
-              <input name="displayName" placeholder="Lakefront Vintage" required />
-            </label>
-            <label>
-              Bio
-              <textarea name="bio" rows="3" placeholder="Curated retro finds."></textarea>
-            </label>
-            <label>
-              User ID (optional)
-              <input name="userId" placeholder="GUID or leave blank" />
-            </label>
-            <button type="submit">POST /api/sellerprofiles</button>
-          </form>
+
 
           <form class="card" data-endpoint="create-product">
             <h3>Create Product</h3>
             <label>
-              Seller profile ID
-              <input name="sellerProfileId" placeholder="GUID" required />
+              Seller user ID
+              <input name="sellerUserId" placeholder="GUID" required />
             </label>
             <label>
               Title
@@ -201,12 +187,11 @@
           <div>
             <p class="label">Products</p>
             <code>GET /api/products/active</code>
-            <code>GET /api/products/by-seller/{sellerProfileId}</code>
+            <code>GET /api/products/by-seller/{sellerUserId}</code>
           </div>
           <div>
             <p class="label">Sellers</p>
-            <code>POST /api/sellerprofiles</code>
-            <code>GET /api/sellerprofiles/{sellerProfileId}</code>
+            <code>POST /api/auth/become-seller</code>
           </div>
           <div>
             <p class="label">Chats</p>

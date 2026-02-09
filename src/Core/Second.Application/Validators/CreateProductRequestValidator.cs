@@ -7,7 +7,7 @@ namespace Second.Application.Validators
     {
         public CreateProductRequestValidator()
         {
-            RuleFor(request => request.SellerProfileId)
+            RuleFor(request => request.SellerUserId)
                 .NotEmpty();
 
             RuleFor(request => request.Title)
