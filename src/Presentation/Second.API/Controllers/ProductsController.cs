@@ -77,7 +77,6 @@ namespace Second.API.Controllers
         }
 
         [HttpGet("by-seller/{sellerUserId:guid}")]
-        [AllowAnonymous]
         public async Task<ActionResult<PagedResult<ProductDto>>> GetBySellerAsync(
             Guid sellerUserId,
             [FromQuery] PaginationParameters pagination,
