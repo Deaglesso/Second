@@ -126,7 +126,7 @@ namespace Second.Persistence.Data.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
-                    b.Property<Guid>("SellerProfileId")
+                    b.Property<Guid>("SellerUserId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Title")
@@ -139,7 +139,7 @@ namespace Second.Persistence.Data.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("SellerProfileId");
+                    b.HasIndex("SellerUserId");
 
                     b.ToTable("Products");
                 });
@@ -222,44 +222,6 @@ namespace Second.Persistence.Data.Migrations
                     b.ToTable("Reports");
                 });
 
-            modelBuilder.Entity("Second.Domain.Entities.SellerProfile", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("Bio")
-                        .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime?>("DeletedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("DisplayName")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("bit");
-
-                    b.Property<int>("Status")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("SellerProfiles");
-                });
-
             modelBuilder.Entity("Second.Domain.Entities.User", b =>
                 {
                     b.Property<Guid>("Id")
@@ -340,13 +302,13 @@ namespace Second.Persistence.Data.Migrations
 
             modelBuilder.Entity("Second.Domain.Entities.Product", b =>
                 {
-                    b.HasOne("Second.Domain.Entities.SellerProfile", "SellerProfile")
+                    b.HasOne("Second.Domain.Entities.User", "SellerUser")
                         .WithMany("Products")
-                        .HasForeignKey("SellerProfileId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .HasForeignKey("SellerUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.Navigation("SellerProfile");
+                    b.Navigation("SellerUser");
                 });
 
             modelBuilder.Entity("Second.Domain.Entities.ProductImage", b =>
@@ -372,10 +334,6 @@ namespace Second.Persistence.Data.Migrations
                     b.Navigation("Images");
                 });
 
-            modelBuilder.Entity("Second.Domain.Entities.SellerProfile", b =>
-                {
-                    b.Navigation("Products");
-                });
 #pragma warning restore 612, 618
         }
     }
