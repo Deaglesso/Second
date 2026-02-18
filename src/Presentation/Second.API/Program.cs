@@ -6,7 +6,9 @@ using FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Second.API.Infrastructure.Exceptions;
 using Second.Application.Contracts.Services;
+using Second.Application.Exceptions;
 using Second.Persistence;
 using Second.Persistence.Data;
 
@@ -17,7 +19,7 @@ builder.Services.AddPersistence(builder.Configuration);
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
-        var key = builder.Configuration["Jwt:Key"] ?? throw new InvalidOperationException("Missing Jwt:Key configuration.");
+        var key = builder.Configuration["Jwt:Key"] ?? throw new ConfigurationAppException("Missing Jwt:Key configuration.");
         var issuer = builder.Configuration["Jwt:Issuer"] ?? "Second.API";
         var audience = builder.Configuration["Jwt:Audience"] ?? "Second.Client";
 
@@ -77,6 +79,7 @@ builder.Services.AddCors(options =>
 builder.Services.AddFluentValidationAutoValidation();
 builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 builder.Services.AddProblemDetails();
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 

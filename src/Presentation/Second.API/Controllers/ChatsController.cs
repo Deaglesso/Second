@@ -2,11 +2,11 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
 using Second.API.Models;
 using Second.Application.Contracts.Services;
 using Second.Application.Dtos;
 using Second.Application.Dtos.Requests;
+using Second.Application.Exceptions;
 using Second.Application.Models;
 
 namespace Second.API.Controllers
@@ -16,12 +16,10 @@ namespace Second.API.Controllers
     public class ChatsController : ControllerBase
     {
         private readonly IChatService _chatService;
-        private readonly ILogger<ChatsController> _logger;
 
-        public ChatsController(IChatService chatService, ILogger<ChatsController> logger)
+        public ChatsController(IChatService chatService)
         {
             _chatService = chatService;
-            _logger = logger;
         }
 
         [HttpPost]
@@ -42,7 +40,7 @@ namespace Second.API.Controllers
             var chatRoom = await _chatService.GetChatRoomAsync(chatRoomId, cancellationToken);
             if (chatRoom is null)
             {
-                return NotFound(CreateProblemDetails("Chat room not found.", $"No chat room found with id {chatRoomId}."));
+                throw new NotFoundAppException($"No chat room found with id {chatRoomId}.", "chat_room_not_found");
             }
 
             return Ok(chatRoom);
@@ -54,11 +52,7 @@ namespace Second.API.Controllers
             [FromQuery] PaginationParameters pagination,
             CancellationToken cancellationToken)
         {
-            var validationResult = ValidatePagination(pagination);
-            if (validationResult is not null)
-            {
-                return validationResult;
-            }
+            ValidatePagination(pagination);
 
             var pageRequest = new PageRequest { PageNumber = pagination.PageNumber, PageSize = pagination.PageSize };
             var chatRooms = await _chatService.GetChatRoomsForUserAsync(userId, pageRequest, cancellationToken);
@@ -71,19 +65,9 @@ namespace Second.API.Controllers
             [FromBody] SendMessageRequest request,
             CancellationToken cancellationToken)
         {
-            try
-            {
-                var updatedRequest = request with { ChatRoomId = chatRoomId };
-                var message = await _chatService.SendMessageAsync(updatedRequest, cancellationToken);
-                return Ok(message);
-            }
-            catch (InvalidOperationException ex)
-            {
-                _logger.LogWarning(ex, "Send message failed for chat room {ChatRoomId}.", chatRoomId);
-                return NotFound(CreateProblemDetails(
-                    "Chat room not found.",
-                    $"No chat room found with id {chatRoomId}."));
-            }
+            var updatedRequest = request with { ChatRoomId = chatRoomId };
+            var message = await _chatService.SendMessageAsync(updatedRequest, cancellationToken);
+            return Ok(message);
         }
 
         [HttpGet("{chatRoomId:guid}/messages")]
@@ -92,36 +76,23 @@ namespace Second.API.Controllers
             [FromQuery] PaginationParameters pagination,
             CancellationToken cancellationToken)
         {
-            var validationResult = ValidatePagination(pagination);
-            if (validationResult is not null)
-            {
-                return validationResult;
-            }
+            ValidatePagination(pagination);
 
             var pageRequest = new PageRequest { PageNumber = pagination.PageNumber, PageSize = pagination.PageSize };
             var messages = await _chatService.GetMessagesAsync(chatRoomId, pageRequest, cancellationToken);
             return Ok(messages);
         }
 
-        private ActionResult? ValidatePagination(PaginationParameters pagination)
+        private static void ValidatePagination(PaginationParameters pagination)
         {
             if (pagination.IsValid())
             {
-                return null;
+                return;
             }
 
-            return BadRequest(CreateProblemDetails(
-                "Invalid pagination parameters.",
-                $"PageNumber must be >= 1 and PageSize must be between 1 and {PaginationParameters.MaxPageSize}."));
-        }
-
-        private static ProblemDetails CreateProblemDetails(string title, string detail)
-        {
-            return new ProblemDetails
-            {
-                Title = title,
-                Detail = detail
-            };
+            throw new BadRequestAppException(
+                $"PageNumber must be >= 1 and PageSize must be between 1 and {PaginationParameters.MaxPageSize}.",
+                "invalid_pagination_parameters");
         }
     }
 }

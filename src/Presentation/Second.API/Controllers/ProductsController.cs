@@ -3,11 +3,11 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
 using Second.API.Models;
 using Second.Application.Contracts.Services;
 using Second.Application.Dtos;
 using Second.Application.Dtos.Requests;
+using Second.Application.Exceptions;
 using Second.Application.Models;
 
 namespace Second.API.Controllers
@@ -17,12 +17,10 @@ namespace Second.API.Controllers
     public class ProductsController : ControllerBase
     {
         private readonly IProductService _productService;
-        private readonly ILogger<ProductsController> _logger;
 
-        public ProductsController(IProductService productService, ILogger<ProductsController> logger)
+        public ProductsController(IProductService productService)
         {
             _productService = productService;
-            _logger = logger;
         }
 
         [HttpPost]
@@ -31,18 +29,8 @@ namespace Second.API.Controllers
             [FromBody] CreateProductRequest request,
             CancellationToken cancellationToken)
         {
-            try
-            {
-                var product = await _productService.CreateAsync(request, cancellationToken);
-                return CreatedAtAction(nameof(GetByIdAsync), new { productId = product.Id }, product);
-            }
-            catch (InvalidOperationException ex)
-            {
-                _logger.LogWarning(ex, "Product create failed for SellerUserId {SellerUserId}.", request.SellerUserId);
-                return NotFound(CreateProblemDetails(
-                    "Seller user not found.",
-                    $"No seller user found with id {request.SellerUserId}."));
-            }
+            var product = await _productService.CreateAsync(request, cancellationToken);
+            return CreatedAtAction(nameof(GetByIdAsync), new { productId = product.Id }, product);
         }
 
         [HttpGet("{productId:guid}")]
@@ -53,7 +41,7 @@ namespace Second.API.Controllers
             var product = await _productService.GetByIdAsync(productId, cancellationToken);
             if (product is null)
             {
-                return NotFound(CreateProblemDetails("Product not found.", $"No product found with id {productId}."));
+                throw new NotFoundAppException($"No product found with id {productId}.", "product_not_found");
             }
 
             return Ok(product);
@@ -65,11 +53,7 @@ namespace Second.API.Controllers
             [FromQuery] PaginationParameters pagination,
             CancellationToken cancellationToken)
         {
-            var validationResult = ValidatePagination(pagination);
-            if (validationResult is not null)
-            {
-                return validationResult;
-            }
+            ValidatePagination(pagination);
 
             var pageRequest = new PageRequest { PageNumber = pagination.PageNumber, PageSize = pagination.PageSize };
             var products = await _productService.GetActiveAsync(pageRequest, cancellationToken);
@@ -82,11 +66,7 @@ namespace Second.API.Controllers
             [FromQuery] PaginationParameters pagination,
             CancellationToken cancellationToken)
         {
-            var validationResult = ValidatePagination(pagination);
-            if (validationResult is not null)
-            {
-                return validationResult;
-            }
+            ValidatePagination(pagination);
 
             var pageRequest = new PageRequest { PageNumber = pagination.PageNumber, PageSize = pagination.PageSize };
             var products = await _productService.GetBySellerUserIdAsync(sellerUserId, pageRequest, cancellationToken);
@@ -100,17 +80,9 @@ namespace Second.API.Controllers
             [FromBody] UpdateProductRequest request,
             CancellationToken cancellationToken)
         {
-            try
-            {
-                var updatedRequest = request with { ProductId = productId };
-                var product = await _productService.UpdateAsync(updatedRequest, cancellationToken);
-                return Ok(product);
-            }
-            catch (InvalidOperationException ex)
-            {
-                _logger.LogWarning(ex, "Product update failed for {ProductId}.", productId);
-                return NotFound(CreateProblemDetails("Product not found.", $"No product found with id {productId}."));
-            }
+            var updatedRequest = request with { ProductId = productId };
+            var product = await _productService.UpdateAsync(updatedRequest, cancellationToken);
+            return Ok(product);
         }
 
         [HttpPost("{productId:guid}/images")]
@@ -120,17 +92,9 @@ namespace Second.API.Controllers
             [FromBody] AddProductImageRequest request,
             CancellationToken cancellationToken)
         {
-            try
-            {
-                var updatedRequest = request with { ProductId = productId };
-                var image = await _productService.AddImageAsync(updatedRequest, cancellationToken);
-                return Ok(image);
-            }
-            catch (InvalidOperationException ex)
-            {
-                _logger.LogWarning(ex, "Add image failed for {ProductId}.", productId);
-                return NotFound(CreateProblemDetails("Product not found.", $"No product found with id {productId}."));
-            }
+            var updatedRequest = request with { ProductId = productId };
+            var image = await _productService.AddImageAsync(updatedRequest, cancellationToken);
+            return Ok(image);
         }
 
         [HttpDelete("images/{imageId:guid}")]
@@ -141,25 +105,16 @@ namespace Second.API.Controllers
             return NoContent();
         }
 
-        private ActionResult? ValidatePagination(PaginationParameters pagination)
+        private static void ValidatePagination(PaginationParameters pagination)
         {
             if (pagination.IsValid())
             {
-                return null;
+                return;
             }
 
-            return BadRequest(CreateProblemDetails(
-                "Invalid pagination parameters.",
-                $"PageNumber must be >= 1 and PageSize must be between 1 and {PaginationParameters.MaxPageSize}."));
-        }
-
-        private static ProblemDetails CreateProblemDetails(string title, string detail)
-        {
-            return new ProblemDetails
-            {
-                Title = title,
-                Detail = detail
-            };
+            throw new BadRequestAppException(
+                $"PageNumber must be >= 1 and PageSize must be between 1 and {PaginationParameters.MaxPageSize}.",
+                "invalid_pagination_parameters");
         }
     }
 }

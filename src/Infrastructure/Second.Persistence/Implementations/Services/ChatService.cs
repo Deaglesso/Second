@@ -6,6 +6,7 @@ using Second.Application.Contracts.Repositories;
 using Second.Application.Contracts.Services;
 using Second.Application.Dtos;
 using Second.Application.Dtos.Requests;
+using Second.Application.Exceptions;
 using Second.Application.Models;
 using Second.Domain.Entities;
 
@@ -80,7 +81,7 @@ namespace Second.Persistence.Implementations.Services
 
             if (chatRoom is null)
             {
-                throw new InvalidOperationException($"Chat room {request.ChatRoomId} was not found.");
+                throw new NotFoundAppException($"Chat room {request.ChatRoomId} was not found.", "chat_room_not_found");
             }
 
             var message = new Message

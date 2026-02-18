@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Mvc;
 using Second.Application.Contracts.Services;
 using Second.Application.Dtos;
 using Second.Application.Dtos.Requests;
+using Second.Application.Exceptions;
 
 namespace Second.API.Controllers
 {
@@ -28,30 +29,16 @@ namespace Second.API.Controllers
         [AllowAnonymous]
         public async Task<ActionResult<AuthResponseDto>> RegisterAsync([FromBody] RegisterUserRequest request, CancellationToken cancellationToken)
         {
-            try
-            {
-                var result = await _authService.RegisterAsync(request, cancellationToken);
-                return Ok(result);
-            }
-            catch (InvalidOperationException ex)
-            {
-                return Conflict(CreateProblemDetails("Registration failed.", ex.Message));
-            }
+            var result = await _authService.RegisterAsync(request, cancellationToken);
+            return Ok(result);
         }
 
         [HttpPost("login")]
         [AllowAnonymous]
         public async Task<ActionResult<AuthResponseDto>> LoginAsync([FromBody] LoginRequest request, CancellationToken cancellationToken)
         {
-            try
-            {
-                var result = await _authService.LoginAsync(request, cancellationToken);
-                return Ok(result);
-            }
-            catch (UnauthorizedAccessException ex)
-            {
-                return Unauthorized(CreateProblemDetails("Login failed.", ex.Message));
-            }
+            var result = await _authService.LoginAsync(request, cancellationToken);
+            return Ok(result);
         }
 
         [HttpPost("logout")]
@@ -63,7 +50,7 @@ namespace Second.API.Controllers
 
             if (string.IsNullOrWhiteSpace(jti) || string.IsNullOrWhiteSpace(expClaim) || !long.TryParse(expClaim, NumberStyles.Integer, CultureInfo.InvariantCulture, out var exp))
             {
-                return Unauthorized(CreateProblemDetails("Logout failed.", "Token metadata is missing."));
+                throw new UnauthorizedAppException("Token metadata is missing.", "token_metadata_missing");
             }
 
             var expiresAtUtc = DateTimeOffset.FromUnixTimeSeconds(exp).UtcDateTime;
@@ -88,7 +75,7 @@ namespace Second.API.Controllers
             var verified = await _authService.VerifyEmailAsync(request, cancellationToken);
             if (!verified)
             {
-                return BadRequest(CreateProblemDetails("Verification failed.", "The token is invalid or expired."));
+                throw new BadRequestAppException("The token is invalid or expired.", "invalid_email_verification_token");
             }
 
             return Ok(new { Message = "Email verified successfully." });
@@ -106,16 +93,9 @@ namespace Second.API.Controllers
         [AllowAnonymous]
         public async Task<IActionResult> ResetPasswordAsync([FromBody] ResetPasswordRequest request, CancellationToken cancellationToken)
         {
-            try
-            {
-                await _authService.ResetPasswordAsync(request, cancellationToken);
-                ClearAuthCookies();
-                return Ok(new { Message = "Password reset successfully." });
-            }
-            catch (InvalidOperationException ex)
-            {
-                return BadRequest(CreateProblemDetails("Reset password failed.", ex.Message));
-            }
+            await _authService.ResetPasswordAsync(request, cancellationToken);
+            ClearAuthCookies();
+            return Ok(new { Message = "Password reset successfully." });
         }
 
         [HttpPost("become-seller")]
@@ -125,18 +105,11 @@ namespace Second.API.Controllers
             var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (!Guid.TryParse(userIdClaim, out var userId))
             {
-                return Unauthorized(CreateProblemDetails("Unauthorized.", "Invalid user token."));
+                throw new UnauthorizedAppException("Invalid user token.", "invalid_user_token");
             }
 
-            try
-            {
-                var result = await _authService.BecomeSellerAsync(userId, cancellationToken);
-                return Ok(result);
-            }
-            catch (InvalidOperationException ex)
-            {
-                return NotFound(CreateProblemDetails("User not found.", ex.Message));
-            }
+            var result = await _authService.BecomeSellerAsync(userId, cancellationToken);
+            return Ok(result);
         }
 
         [HttpGet("me")]
@@ -146,13 +119,13 @@ namespace Second.API.Controllers
             var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (!Guid.TryParse(userIdClaim, out var userId))
             {
-                return Unauthorized(CreateProblemDetails("Unauthorized.", "Invalid user token."));
+                throw new UnauthorizedAppException("Invalid user token.", "invalid_user_token");
             }
 
             var user = await _authService.GetUserByIdAsync(userId, cancellationToken);
             if (user is null)
             {
-                return NotFound(CreateProblemDetails("User not found.", $"No user found with id {userId}."));
+                throw new NotFoundAppException($"No user found with id {userId}.", "user_not_found");
             }
 
             return Ok(user);
@@ -172,15 +145,6 @@ namespace Second.API.Controllers
 
             Response.Cookies.Append("access_token", string.Empty, options);
             Response.Cookies.Append("refresh_token", string.Empty, options);
-        }
-
-        private static ProblemDetails CreateProblemDetails(string title, string detail)
-        {
-            return new ProblemDetails
-            {
-                Title = title,
-                Detail = detail
-            };
         }
     }
 }
