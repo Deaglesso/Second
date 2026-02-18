@@ -1,6 +1,9 @@
 using System;
+using System.Net;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using MailKit;
 using MailKit.Net.Smtp;
 using MailKit.Security;
 using Microsoft.Extensions.Logging;
@@ -34,11 +37,7 @@ namespace Second.Persistence.Implementations.Services
             try
             {
                 await smtpClient.ConnectAsync(_options.SmtpHost, _options.SmtpPort, secureSocketOptions, cancellationToken);
-
-                if (!_options.UseDefaultCredentials)
-                {
-                    await smtpClient.AuthenticateAsync(_options.Username, _options.Password, cancellationToken);
-                }
+                await AuthenticateIfSupportedAsync(smtpClient, cancellationToken);
 
                 await smtpClient.SendAsync(message, cancellationToken);
                 await smtpClient.DisconnectAsync(quit: true, cancellationToken);
@@ -50,6 +49,23 @@ namespace Second.Persistence.Implementations.Services
                 _logger.LogError(ex, "Failed to send email to {ToEmail} with subject {Subject}", toEmail, subject);
                 throw;
             }
+        }
+
+        private async Task AuthenticateIfSupportedAsync(SmtpClient smtpClient, CancellationToken cancellationToken)
+        {
+            if (!smtpClient.Capabilities.HasFlag(SmtpCapabilities.Authentication))
+            {
+                _logger.LogDebug("SMTP server {Host}:{Port} does not advertise AUTH capability; skipping authentication.", _options.SmtpHost, _options.SmtpPort);
+                return;
+            }
+
+            if (_options.UseDefaultCredentials)
+            {
+                await smtpClient.AuthenticateAsync(Encoding.UTF8, CredentialCache.DefaultNetworkCredentials, cancellationToken);
+                return;
+            }
+
+            await smtpClient.AuthenticateAsync(_options.Username, _options.Password, cancellationToken);
         }
 
         private MimeMessage BuildMessage(string toEmail, string subject, string body)

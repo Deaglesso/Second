@@ -12,7 +12,7 @@ Configure the `Email` section in `appsettings.json` (or environment variables):
 - `Email:SmtpHost`: SMTP host name.
 - `Email:SmtpPort`: SMTP port (usually 587 for STARTTLS or 465 for SSL/TLS).
 - `Email:UseSsl`: when `true`, the sender uses STARTTLS by default (or SSL-on-connect for port 465).
-- `Email:UseDefaultCredentials`: use machine credentials when `true`.
+- `Email:UseDefaultCredentials`: use machine/default network credentials when `true` (MailKit will attempt SMTP AUTH with default credentials when the server advertises AUTH).
 - `Email:Username` / `Email:Password`: required when enabled and not using default credentials.
 - `Email:TimeoutMilliseconds`: SMTP timeout (1,000-120,000 ms).
 
