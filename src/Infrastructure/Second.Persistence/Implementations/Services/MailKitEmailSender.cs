@@ -10,6 +10,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MimeKit;
 using Second.Application.Contracts.Services;
+using Second.Application.Exceptions;
 using Second.Persistence.Configuration;
 
 namespace Second.Persistence.Implementations.Services
@@ -72,17 +73,17 @@ namespace Second.Persistence.Implementations.Services
         {
             if (string.IsNullOrWhiteSpace(toEmail))
             {
-                throw new ArgumentException("Destination email is required.", nameof(toEmail));
+                throw new BadRequestAppException("Destination email is required.", "email_destination_required");
             }
 
             if (!MailboxAddress.TryParse(toEmail, out var toMailbox))
             {
-                throw new ArgumentException("Destination email address is invalid.", nameof(toEmail));
+                throw new BadRequestAppException("Destination email address is invalid.", "email_destination_invalid");
             }
 
             if (!MailboxAddress.TryParse(_options.FromAddress, out var fromMailbox))
             {
-                throw new InvalidOperationException("Email sender address is invalid. Configure Email:FromAddress with a valid email address.");
+                throw new ConfigurationAppException("Email sender address is invalid. Configure Email:FromAddress with a valid email address.", "invalid_email_sender_address");
             }
 
             fromMailbox.Name = _options.FromName;

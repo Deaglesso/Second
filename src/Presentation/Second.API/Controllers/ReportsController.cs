@@ -6,6 +6,7 @@ using Second.API.Models;
 using Second.Application.Contracts.Services;
 using Second.Application.Dtos;
 using Second.Application.Dtos.Requests;
+using Second.Application.Exceptions;
 using Second.Application.Models;
 using Second.Domain.Enums;
 
@@ -38,11 +39,7 @@ namespace Second.API.Controllers
             [FromQuery] PaginationParameters pagination,
             CancellationToken cancellationToken)
         {
-            var validationResult = ValidatePagination(pagination);
-            if (validationResult is not null)
-            {
-                return validationResult;
-            }
+            ValidatePagination(pagination);
 
             var pageRequest = new PageRequest { PageNumber = pagination.PageNumber, PageSize = pagination.PageSize };
             var reports = await _reportService.GetByTargetAsync(targetType, targetId, pageRequest, cancellationToken);
@@ -55,36 +52,23 @@ namespace Second.API.Controllers
             [FromQuery] PaginationParameters pagination,
             CancellationToken cancellationToken)
         {
-            var validationResult = ValidatePagination(pagination);
-            if (validationResult is not null)
-            {
-                return validationResult;
-            }
+            ValidatePagination(pagination);
 
             var pageRequest = new PageRequest { PageNumber = pagination.PageNumber, PageSize = pagination.PageSize };
             var reports = await _reportService.GetByReporterAsync(reporterId, pageRequest, cancellationToken);
             return Ok(reports);
         }
 
-        private ActionResult? ValidatePagination(PaginationParameters pagination)
+        private static void ValidatePagination(PaginationParameters pagination)
         {
             if (pagination.IsValid())
             {
-                return null;
+                return;
             }
 
-            return BadRequest(CreateProblemDetails(
-                "Invalid pagination parameters.",
-                $"PageNumber must be >= 1 and PageSize must be between 1 and {PaginationParameters.MaxPageSize}."));
-        }
-
-        private static ProblemDetails CreateProblemDetails(string title, string detail)
-        {
-            return new ProblemDetails
-            {
-                Title = title,
-                Detail = detail
-            };
+            throw new BadRequestAppException(
+                $"PageNumber must be >= 1 and PageSize must be between 1 and {PaginationParameters.MaxPageSize}.",
+                "invalid_pagination_parameters");
         }
     }
 }

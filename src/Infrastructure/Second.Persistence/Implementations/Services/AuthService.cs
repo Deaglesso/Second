@@ -9,6 +9,7 @@ using Second.Application.Contracts.Repositories;
 using Second.Application.Contracts.Services;
 using Second.Application.Dtos;
 using Second.Application.Dtos.Requests;
+using Second.Application.Exceptions;
 using Second.Domain.Entities;
 
 namespace Second.Persistence.Implementations.Services
@@ -45,7 +46,7 @@ namespace Second.Persistence.Implementations.Services
             var existingUser = await _userRepository.GetByEmailAsync(normalizedEmail, includeDeleted: true, cancellationToken);
             if (existingUser is not null)
             {
-                throw new InvalidOperationException("An account with this email already exists.");
+                throw new ConflictAppException("An account with this email already exists.", "email_already_exists");
             }
 
             var user = new User
@@ -79,13 +80,13 @@ namespace Second.Persistence.Implementations.Services
 
             if (user is null)
             {
-                throw new UnauthorizedAccessException("Invalid email or password.");
+                throw new UnauthorizedAppException("Invalid email or password.", "invalid_credentials");
             }
 
             var verification = _passwordHasher.VerifyHashedPassword(user, user.PasswordHash, request.Password);
             if (verification == PasswordVerificationResult.Failed)
             {
-                throw new UnauthorizedAccessException("Invalid email or password.");
+                throw new UnauthorizedAppException("Invalid email or password.", "invalid_credentials");
             }
 
             var (token, expiresAtUtc) = _tokenService.GenerateToken(user);
@@ -104,7 +105,7 @@ namespace Second.Persistence.Implementations.Services
             var user = await _userRepository.GetByIdAsync(userId, cancellationToken: cancellationToken);
             if (user is null)
             {
-                throw new InvalidOperationException("User not found.");
+                throw new NotFoundAppException("User not found.", "user_not_found");
             }
 
             if (user.Role == Domain.Enums.UserRole.User)
@@ -202,7 +203,7 @@ namespace Second.Persistence.Implementations.Services
             var user = await _userRepository.GetByPasswordResetTokenHashAsync(tokenHash, cancellationToken);
             if (user is null || !user.PasswordResetTokenExpiresAtUtc.HasValue || user.PasswordResetTokenExpiresAtUtc.Value < DateTime.UtcNow)
             {
-                throw new InvalidOperationException("The reset token is invalid or expired.");
+                throw new BadRequestAppException("The reset token is invalid or expired.", "invalid_reset_token");
             }
 
             user.PasswordHash = _passwordHasher.HashPassword(user, request.NewPassword);

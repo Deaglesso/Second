@@ -6,6 +6,7 @@ using Second.Application.Contracts.Repositories;
 using Second.Application.Contracts.Services;
 using Second.Application.Dtos;
 using Second.Application.Dtos.Requests;
+using Second.Application.Exceptions;
 using Second.Application.Models;
 using Second.Domain.Entities;
 
@@ -34,7 +35,7 @@ namespace Second.Persistence.Implementations.Services
 
             if (!sellerExists)
             {
-                throw new InvalidOperationException($"Seller user {request.SellerUserId} was not found.");
+                throw new NotFoundAppException($"Seller user {request.SellerUserId} was not found.", "seller_not_found");
             }
 
             var product = new Product
@@ -114,7 +115,7 @@ namespace Second.Persistence.Implementations.Services
 
             if (existingProduct is null)
             {
-                throw new InvalidOperationException("Product not found.");
+                throw new NotFoundAppException("Product not found.", "product_not_found");
             }
 
             existingProduct.Title = request.Title;
@@ -134,7 +135,7 @@ namespace Second.Persistence.Implementations.Services
 
             if (product is null)
             {
-                throw new InvalidOperationException("Product not found.");
+                throw new NotFoundAppException("Product not found.", "product_not_found");
             }
 
             var image = new ProductImage

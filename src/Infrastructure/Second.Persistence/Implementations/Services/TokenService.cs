@@ -5,6 +5,7 @@ using System.Text;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 using Second.Application.Contracts.Services;
+using Second.Application.Exceptions;
 using Second.Domain.Entities;
 
 namespace Second.Persistence.Implementations.Services
@@ -20,7 +21,7 @@ namespace Second.Persistence.Implementations.Services
 
         public (string Token, DateTime ExpiresAtUtc) GenerateToken(User user)
         {
-            var key = _configuration["Jwt:Key"] ?? throw new InvalidOperationException("Missing Jwt:Key configuration.");
+            var key = _configuration["Jwt:Key"] ?? throw new ConfigurationAppException("Missing Jwt:Key configuration.");
             var issuer = _configuration["Jwt:Issuer"] ?? "Second.API";
             var audience = _configuration["Jwt:Audience"] ?? "Second.Client";
             var expiresInMinutes = int.TryParse(_configuration["Jwt:ExpiresInMinutes"], out var parsed) ? parsed : 60;
