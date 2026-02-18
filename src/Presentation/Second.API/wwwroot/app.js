@@ -1,23 +1,18 @@
 const requestLog = document.getElementById("request-log");
 const responseLog = document.getElementById("response-log");
+const tokenInput = document.getElementById("access-token");
+const tokenStatus = document.getElementById("token-status");
+const clearTokenButton = document.getElementById("clear-token");
 
 const setLog = (element, payload) => {
   element.textContent = typeof payload === "string" ? payload : JSON.stringify(payload, null, 2);
-};
-
-const buildQuery = (params) => {
-  const entries = Object.entries(params).filter(([, value]) => value !== "" && value !== undefined);
-  if (!entries.length) {
-    return "";
-  }
-  const query = new URLSearchParams(entries).toString();
-  return `?${query}`;
 };
 
 const parseBody = (text) => {
   if (!text) {
     return null;
   }
+
   try {
     return JSON.parse(text);
   } catch {
@@ -25,75 +20,121 @@ const parseBody = (text) => {
   }
 };
 
-const postJson = async (url, body) => {
-  const response = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-  const text = await response.text();
-  return { status: response.status, body: parseBody(text) };
+const getToken = () => tokenInput.value.trim();
+
+const setToken = (token) => {
+  tokenInput.value = token ?? "";
+  refreshTokenStatus();
 };
 
-const getJson = async (url) => {
-  const response = await fetch(url);
+const refreshTokenStatus = () => {
+  const token = getToken();
+  tokenStatus.textContent = token ? "Token loaded (Authorization header will be sent)." : "No token loaded.";
+};
+
+const jsonRequest = async (method, url, body, { authenticated = false } = {}) => {
+  const headers = { "Content-Type": "application/json" };
+
+  if (authenticated) {
+    const token = getToken();
+    if (!token) {
+      throw new Error("No access token loaded. Login first or paste token in Session box.");
+    }
+
+    headers.Authorization = `Bearer ${token}`;
+  }
+
+  const response = await fetch(url, {
+    method,
+    headers,
+    body: body ? JSON.stringify(body) : undefined,
+  });
+
   const text = await response.text();
   return { status: response.status, body: parseBody(text) };
 };
 
 const handlers = {
-  "create-product": async (form) => {
-    const imageUrls = form.imageUrls.value
-      ? form.imageUrls.value.split(",").map((item) => item.trim()).filter(Boolean)
-      : [];
+  register: async (form) => {
     const payload = {
-      sellerUserId: form.sellerUserId.value,
-      title: form.title.value,
-      priceText: form.priceText.value,
-      condition: form.condition.value,
-      description: form.description.value,
-      imageUrls,
+      email: form.email.value,
+      password: form.password.value,
     };
-    const endpoint = "/api/products";
+
+    const endpoint = "/api/auth/register";
     setLog(requestLog, { method: "POST", endpoint, payload });
-    return postJson(endpoint, payload);
+    const result = await jsonRequest("POST", endpoint, payload);
+    if (result?.body?.accessToken) {
+      setToken(result.body.accessToken);
+    }
+
+    return result;
   },
-  "list-products": async (form) => {
-    const query = buildQuery({
-      pageNumber: form.pageNumber.value,
-      pageSize: form.pageSize.value,
-    });
-    const endpoint = `/api/products/active${query}`;
-    setLog(requestLog, { method: "GET", endpoint });
-    return getJson(endpoint);
+  "request-email-verification": async (form) => {
+    const payload = { email: form.email.value };
+    const endpoint = "/api/auth/request-email-verification";
+    setLog(requestLog, { method: "POST", endpoint, payload });
+    return jsonRequest("POST", endpoint, payload);
   },
-  "start-chat": async (form) => {
+  "verify-email": async (form) => {
+    const payload = { token: form.token.value };
+    const endpoint = "/api/auth/verify-email";
+    setLog(requestLog, { method: "POST", endpoint, payload });
+    return jsonRequest("POST", endpoint, payload);
+  },
+  login: async (form) => {
     const payload = {
-      productId: form.productId.value,
-      buyerId: form.buyerId.value,
-      sellerId: form.sellerId.value,
+      email: form.email.value,
+      password: form.password.value,
     };
-    const endpoint = "/api/chats";
+
+    const endpoint = "/api/auth/login";
     setLog(requestLog, { method: "POST", endpoint, payload });
-    return postJson(endpoint, payload);
+    const result = await jsonRequest("POST", endpoint, payload);
+
+    if (result?.body?.accessToken) {
+      setToken(result.body.accessToken);
+    }
+
+    return result;
   },
-  "send-message": async (form) => {
+  me: async () => {
+    const endpoint = "/api/auth/me";
+    setLog(requestLog, { method: "GET", endpoint, authenticated: true });
+    return jsonRequest("GET", endpoint, null, { authenticated: true });
+  },
+  logout: async () => {
+    const endpoint = "/api/auth/logout";
+    setLog(requestLog, { method: "POST", endpoint, authenticated: true });
+    const result = await jsonRequest("POST", endpoint, {}, { authenticated: true });
+    return result;
+  },
+  "forgot-password": async (form) => {
+    const payload = { email: form.email.value };
+    const endpoint = "/api/auth/forgot-password";
+    setLog(requestLog, { method: "POST", endpoint, payload });
+    return jsonRequest("POST", endpoint, payload);
+  },
+  "reset-password": async (form) => {
     const payload = {
-      senderId: form.senderId.value,
-      content: form.content.value,
+      token: form.token.value,
+      newPassword: form.newPassword.value,
     };
-    const endpoint = `/api/chats/${form.chatRoomId.value}/messages`;
+
+    const endpoint = "/api/auth/reset-password";
     setLog(requestLog, { method: "POST", endpoint, payload });
-    return postJson(endpoint, payload);
+    return jsonRequest("POST", endpoint, payload);
   },
-  "list-chats": async (form) => {
-    const query = buildQuery({
-      pageNumber: form.pageNumber.value,
-      pageSize: form.pageSize.value,
-    });
-    const endpoint = `/api/chats/by-user/${form.userId.value}${query}`;
-    setLog(requestLog, { method: "GET", endpoint });
-    return getJson(endpoint);
+  "become-seller": async () => {
+    const endpoint = "/api/auth/become-seller";
+    setLog(requestLog, { method: "POST", endpoint, authenticated: true });
+    const result = await jsonRequest("POST", endpoint, {}, { authenticated: true });
+
+    if (result?.body?.accessToken) {
+      setToken(result.body.accessToken);
+    }
+
+    return result;
   },
 };
 
@@ -103,10 +144,12 @@ document.querySelectorAll("form[data-endpoint]").forEach((form) => {
     responseLog.textContent = "Loading...";
     const key = form.dataset.endpoint;
     const handler = handlers[key];
+
     if (!handler) {
       responseLog.textContent = "No handler registered.";
       return;
     }
+
     try {
       const result = await handler(form);
       setLog(responseLog, result);
@@ -115,3 +158,10 @@ document.querySelectorAll("form[data-endpoint]").forEach((form) => {
     }
   });
 });
+
+clearTokenButton.addEventListener("click", () => {
+  setToken("");
+});
+
+tokenInput.addEventListener("input", refreshTokenStatus);
+refreshTokenStatus();

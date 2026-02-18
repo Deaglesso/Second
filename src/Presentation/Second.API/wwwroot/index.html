@@ -3,169 +3,104 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Second Demo</title>
+    <title>Second Auth Tester</title>
     <link rel="stylesheet" href="app.css" />
   </head>
   <body>
     <header class="hero">
       <div>
-        <p class="eyebrow">Second · Demo</p>
-        <h1>Marketplace API Preview</h1>
+        <p class="eyebrow">Second · Auth Tester</p>
+        <h1>Frontend for API Auth Validation</h1>
         <p class="lede">
-          A lightweight front end to show anonymous browsing plus authenticated product, chat, and report flows.
+          Use this page to test registration, email verification, login/logout, /me, password reset, and seller upgrade against your running API.
         </p>
-        <div class="actions">
-          <a class="primary" href="/swagger">Open API Docs</a>
-          <a class="secondary" href="#demo">Run Demo Requests</a>
-        </div>
       </div>
       <div class="hero-card">
-        <h2>Demo Focus</h2>
-        <ul>
-          <li>Anonymous visitors can browse public listings without an account.</li>
-          <li>Registered users start as User and can become Seller later.</li>
-          <li>Paginated product listings.</li>
-          <li>Chat rooms and message history.</li>
-          <li>Report tracking across entities.</li>
-        </ul>
+        <h2>How to use</h2>
+        <ol>
+          <li>Register a user.</li>
+          <li>Request and verify email token.</li>
+          <li>Login and let this page store your access token in memory.</li>
+          <li>Call protected endpoints like <code>/api/auth/me</code>.</li>
+        </ol>
+        <p class="warning">Token storage is in-memory only for testing. Refreshing page clears it.</p>
       </div>
     </header>
 
     <main>
-      <section class="panel">
-        <h2>Sample Data Snapshot</h2>
-        <div class="grid">
-          <article>
-            <h3>Seller</h3>
-            <p class="label">Display name</p>
-            <p>Lakefront Vintage</p>
-            <p class="label">Role</p>
-            <p>Seller</p>
-          </article>
-          <article>
-            <h3>Product</h3>
-            <p class="label">Title</p>
-            <p>Retro Desk Lamp</p>
-            <p class="label">Price</p>
-            <p>$85</p>
-          </article>
-          <article>
-            <h3>Chat</h3>
-            <p class="label">Latest message</p>
-            <p>Is the lamp still available?</p>
-            <p class="label">Updated</p>
-            <p>Just now</p>
-          </article>
-          <article>
-            <h3>Report</h3>
-            <p class="label">Target</p>
-            <p>Product</p>
-            <p class="label">Reason</p>
-            <p>Listing accuracy</p>
-          </article>
+      <section class="panel token-panel">
+        <h2>Session</h2>
+        <div class="session-grid">
+          <label>
+            Access token (auto-filled after login/register)
+            <textarea id="access-token" rows="4" placeholder="Bearer token"></textarea>
+          </label>
+          <div>
+            <p class="label">Token status</p>
+            <p id="token-status">No token loaded.</p>
+            <button id="clear-token" class="secondary-btn" type="button">Clear token</button>
+          </div>
         </div>
       </section>
 
-      <section id="demo" class="panel">
-        <h2>Interactive Demo Requests</h2>
-        <p class="lede">
-          Use the controls below to exercise API endpoints. Anonymous visitors can use read-only endpoints;
-          update IDs from your database for authenticated flows.
-        </p>
+      <section class="panel">
+        <h2>Auth Endpoints</h2>
         <div class="grid demo-grid">
-
-
-          <form class="card" data-endpoint="create-product">
-            <h3>Create Product</h3>
-            <label>
-              Seller user ID
-              <input name="sellerUserId" placeholder="GUID" required />
-            </label>
-            <label>
-              Title
-              <input name="title" placeholder="Retro Desk Lamp" required />
-            </label>
-            <label>
-              Price
-              <input name="priceText" placeholder="$85" required />
-            </label>
-            <label>
-              Condition
-              <input name="condition" placeholder="Good" required />
-            </label>
-            <label>
-              Description
-              <textarea name="description" rows="3" placeholder="Warm glow, great condition."></textarea>
-            </label>
-            <label>
-              Image URLs (comma separated)
-              <input name="imageUrls" placeholder="https://..." />
-            </label>
-            <button type="submit">POST /api/products</button>
+          <form class="card" data-endpoint="register">
+            <h3>Register</h3>
+            <label>Email <input name="email" type="email" required /></label>
+            <label>Password <input name="password" type="password" required /></label>
+            <button type="submit">POST /api/auth/register</button>
           </form>
 
-          <form class="card" data-endpoint="list-products">
-            <h3>List Active Products</h3>
-            <label>
-              Page number
-              <input name="pageNumber" type="number" min="1" value="1" />
-            </label>
-            <label>
-              Page size
-              <input name="pageSize" type="number" min="1" max="100" value="10" />
-            </label>
-            <button type="submit">GET /api/products/active</button>
+          <form class="card" data-endpoint="request-email-verification">
+            <h3>Request Email Verification</h3>
+            <label>Email <input name="email" type="email" required /></label>
+            <button type="submit">POST /api/auth/request-email-verification</button>
           </form>
 
-          <form class="card" data-endpoint="start-chat">
-            <h3>Start Chat</h3>
-            <label>
-              Product ID
-              <input name="productId" placeholder="GUID" required />
-            </label>
-            <label>
-              Buyer ID
-              <input name="buyerId" placeholder="GUID" required />
-            </label>
-            <label>
-              Seller ID
-              <input name="sellerId" placeholder="GUID" required />
-            </label>
-            <button type="submit">POST /api/chats</button>
+          <form class="card" data-endpoint="verify-email">
+            <h3>Verify Email</h3>
+            <label>Verification token <textarea name="token" rows="3" required></textarea></label>
+            <button type="submit">POST /api/auth/verify-email</button>
           </form>
 
-          <form class="card" data-endpoint="send-message">
-            <h3>Send Message</h3>
-            <label>
-              Chat room ID
-              <input name="chatRoomId" placeholder="GUID" required />
-            </label>
-            <label>
-              Sender ID
-              <input name="senderId" placeholder="GUID" required />
-            </label>
-            <label>
-              Message
-              <textarea name="content" rows="3" placeholder="Is this still available?" required></textarea>
-            </label>
-            <button type="submit">POST /api/chats/{chatRoomId}/messages</button>
+          <form class="card" data-endpoint="login">
+            <h3>Login</h3>
+            <label>Email <input name="email" type="email" required /></label>
+            <label>Password <input name="password" type="password" required /></label>
+            <button type="submit">POST /api/auth/login</button>
           </form>
 
-          <form class="card" data-endpoint="list-chats">
-            <h3>List Chats for User</h3>
-            <label>
-              User ID
-              <input name="userId" placeholder="GUID" required />
-            </label>
-            <label>
-              Page number
-              <input name="pageNumber" type="number" min="1" value="1" />
-            </label>
-            <label>
-              Page size
-              <input name="pageSize" type="number" min="1" max="100" value="10" />
-            </label>
-            <button type="submit">GET /api/chats/by-user/{userId}</button>
+          <form class="card" data-endpoint="me">
+            <h3>Me</h3>
+            <p>Uses bearer token from Session box.</p>
+            <button type="submit">GET /api/auth/me</button>
+          </form>
+
+          <form class="card" data-endpoint="logout">
+            <h3>Logout</h3>
+            <p>Revokes current token jti server-side.</p>
+            <button type="submit">POST /api/auth/logout</button>
+          </form>
+
+          <form class="card" data-endpoint="forgot-password">
+            <h3>Forgot Password</h3>
+            <label>Email <input name="email" type="email" required /></label>
+            <button type="submit">POST /api/auth/forgot-password</button>
+          </form>
+
+          <form class="card" data-endpoint="reset-password">
+            <h3>Reset Password</h3>
+            <label>Reset token <textarea name="token" rows="3" required></textarea></label>
+            <label>New password <input name="newPassword" type="password" required /></label>
+            <button type="submit">POST /api/auth/reset-password</button>
+          </form>
+
+          <form class="card" data-endpoint="become-seller">
+            <h3>Become Seller</h3>
+            <p>Requires bearer token. Returns a new token with role claim.</p>
+            <button type="submit">POST /api/auth/become-seller</button>
           </form>
         </div>
 
@@ -180,35 +115,10 @@
           </div>
         </div>
       </section>
-
-      <section id="endpoints" class="panel">
-        <h2>Key Endpoints</h2>
-        <div class="grid endpoints">
-          <div>
-            <p class="label">Products</p>
-            <code>GET /api/products/active</code>
-            <code>GET /api/products/by-seller/{sellerUserId}</code>
-          </div>
-          <div>
-            <p class="label">Sellers</p>
-            <code>POST /api/auth/become-seller</code>
-          </div>
-          <div>
-            <p class="label">Chats</p>
-            <code>GET /api/chats/by-user/{userId}</code>
-            <code>GET /api/chats/{chatRoomId}/messages</code>
-          </div>
-          <div>
-            <p class="label">Reports</p>
-            <code>GET /api/reports/by-target</code>
-            <code>GET /api/reports/by-reporter/{reporterId}</code>
-          </div>
-        </div>
-      </section>
     </main>
 
     <footer>
-      <p>Second Demo UI · Powered by Second.API</p>
+      <p>Second Auth Tester · Powered by Second.API</p>
     </footer>
     <script src="app.js"></script>
   </body>
