@@ -13,6 +13,10 @@ namespace Second.Application.Dtos
 
         public bool EmailVerified { get; init; }
 
+        public decimal SellerRating { get; init; }
+
+        public int ListingLimit { get; init; }
+
         public DateTime CreatedAt { get; init; }
     }
 }
