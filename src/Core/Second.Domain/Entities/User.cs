@@ -14,6 +14,10 @@ namespace Second.Domain.Entities
 
         public bool EmailVerified { get; set; }
 
+        public decimal SellerRating { get; set; }
+
+        public int ListingLimit { get; set; } = 10;
+
         public ICollection<Product> Products { get; set; } = new List<Product>();
 
         public bool IsSeller()

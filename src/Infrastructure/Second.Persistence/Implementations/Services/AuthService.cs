@@ -53,7 +53,9 @@ namespace Second.Persistence.Implementations.Services
             {
                 Email = normalizedEmail,
                 Role = Domain.Enums.UserRole.User,
-                EmailVerified = false
+                EmailVerified = false,
+                SellerRating = 0.0m,
+                ListingLimit = 10
             };
 
             user.PasswordHash = _passwordHasher.HashPassword(user, request.Password);
@@ -231,6 +233,8 @@ namespace Second.Persistence.Implementations.Services
                 Email = user.Email,
                 Role = user.Role,
                 EmailVerified = user.EmailVerified,
+                SellerRating = user.SellerRating,
+                ListingLimit = user.ListingLimit,
                 CreatedAt = user.CreatedAt
             };
         }

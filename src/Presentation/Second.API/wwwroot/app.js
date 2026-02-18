@@ -136,6 +136,13 @@ const handlers = {
 
     return result;
   },
+  "admin-update-listing-limit": async (form) => {
+    const sellerUserId = form.sellerUserId.value.trim();
+    const payload = { listingLimit: Number(form.listingLimit.value) };
+    const endpoint = `/api/admin/sellers/${sellerUserId}/listing-limit`;
+    setLog(requestLog, { method: "PATCH", endpoint, payload, authenticated: true });
+    return jsonRequest("PATCH", endpoint, payload, { authenticated: true });
+  },
 };
 
 document.querySelectorAll("form[data-endpoint]").forEach((form) => {

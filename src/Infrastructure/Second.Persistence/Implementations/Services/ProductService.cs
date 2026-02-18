@@ -17,15 +17,18 @@ namespace Second.Persistence.Implementations.Services
         private readonly IProductRepository _productRepository;
         private readonly IProductImageRepository _productImageRepository;
         private readonly IEntityValidationService _entityValidationService;
+        private readonly IUserRepository _userRepository;
 
         public ProductService(
             IProductRepository productRepository,
             IProductImageRepository productImageRepository,
-            IEntityValidationService entityValidationService)
+            IEntityValidationService entityValidationService,
+            IUserRepository userRepository)
         {
             _productRepository = productRepository;
             _productImageRepository = productImageRepository;
             _entityValidationService = entityValidationService;
+            _userRepository = userRepository;
         }
 
         public async Task<ProductDto> CreateAsync(CreateProductRequest request, CancellationToken cancellationToken = default)
@@ -36,6 +39,19 @@ namespace Second.Persistence.Implementations.Services
             if (!sellerExists)
             {
                 throw new NotFoundAppException($"Seller user {request.SellerUserId} was not found.", "seller_not_found");
+            }
+
+            var seller = await _userRepository.GetByIdAsync(request.SellerUserId, cancellationToken: cancellationToken);
+            if (seller is null)
+            {
+                throw new NotFoundAppException($"Seller user {request.SellerUserId} was not found.", "seller_not_found");
+            }
+
+            var hasListingCapacity = await _entityValidationService
+                .SellerHasCapacityForActiveListingAsync(request.SellerUserId, seller.ListingLimit, excludedProductId: null, cancellationToken);
+            if (!hasListingCapacity)
+            {
+                throw new ConflictAppException($"Seller reached active listing limit ({seller.ListingLimit}).", "listing_limit_reached");
             }
 
             var product = new Product
@@ -116,6 +132,22 @@ namespace Second.Persistence.Implementations.Services
             if (existingProduct is null)
             {
                 throw new NotFoundAppException("Product not found.", "product_not_found");
+            }
+
+            if (request.IsActive)
+            {
+                var seller = await _userRepository.GetByIdAsync(existingProduct.SellerUserId, cancellationToken: cancellationToken);
+                if (seller is null)
+                {
+                    throw new NotFoundAppException($"Seller user {existingProduct.SellerUserId} was not found.", "seller_not_found");
+                }
+
+                var hasListingCapacity = await _entityValidationService
+                    .SellerHasCapacityForActiveListingAsync(existingProduct.SellerUserId, seller.ListingLimit, existingProduct.Id, cancellationToken);
+                if (!hasListingCapacity)
+                {
+                    throw new ConflictAppException($"Seller reached active listing limit ({seller.ListingLimit}).", "listing_limit_reached");
+                }
             }
 
             existingProduct.Title = request.Title;

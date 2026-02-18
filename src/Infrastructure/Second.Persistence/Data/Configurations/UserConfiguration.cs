@@ -8,8 +8,6 @@ namespace Second.Persistence.Data.Configurations
     {
         public void Configure(EntityTypeBuilder<User> builder)
         {
-            builder.ToTable("Users");
-
             builder.HasKey(user => user.Id);
 
             builder.Property(user => user.Email)
@@ -25,6 +23,20 @@ namespace Second.Persistence.Data.Configurations
 
             builder.Property(user => user.Role)
                 .IsRequired();
+
+            builder.Property(user => user.SellerRating)
+                .HasPrecision(2, 1)
+                .HasDefaultValue(0.0m);
+
+            builder.Property(user => user.ListingLimit)
+                .IsRequired()
+                .HasDefaultValue(10);
+
+            builder.ToTable("Users", tableBuilder =>
+            {
+                tableBuilder.HasCheckConstraint("CK_Users_SellerRating", "[SellerRating] >= 0 AND [SellerRating] <= 5");
+                tableBuilder.HasCheckConstraint("CK_Users_ListingLimit", "[ListingLimit] >= 0");
+            });
 
             builder.Property(user => user.EmailVerificationTokenHash)
                 .HasMaxLength(256);

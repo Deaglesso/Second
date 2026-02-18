@@ -12,7 +12,7 @@
         <p class="eyebrow">Second · Auth Tester</p>
         <h1>Frontend for API Auth Validation</h1>
         <p class="lede">
-          Use this page to test registration, email verification, login/logout, /me, password reset, and seller upgrade against your running API.
+          Use this page to test registration, email verification, login/logout, /me, password reset, seller upgrade, and admin seller listing-limit updates against your running API.
         </p>
       </div>
       <div class="hero-card">
@@ -101,6 +101,14 @@
             <h3>Become Seller</h3>
             <p>Requires bearer token. Returns a new token with role claim.</p>
             <button type="submit">POST /api/auth/become-seller</button>
+          </form>
+
+          <form class="card" data-endpoint="admin-update-listing-limit">
+            <h3>Admin: Update Seller Listing Limit</h3>
+            <p>Requires an admin bearer token.</p>
+            <label>Seller user id <input name="sellerUserId" type="text" required /></label>
+            <label>Listing limit <input name="listingLimit" type="number" min="0" required /></label>
+            <button type="submit">PATCH /api/admin/sellers/{sellerUserId}/listing-limit</button>
           </form>
         </div>
 

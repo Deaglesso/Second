@@ -66,6 +66,7 @@ namespace Second.Persistence
             services.AddScoped<LogEmailSender>();
             services.AddScoped<MailKitEmailSender>();
             services.AddScoped<IAuthService, AuthService>();
+            services.AddScoped<IAdminSellerService, AdminSellerService>();
             services.AddScoped<IUserAuthorizationService, UserAuthorizationService>();
             services.AddScoped<IProductService, ProductService>();
             services.AddScoped<IChatService, ChatService>();
