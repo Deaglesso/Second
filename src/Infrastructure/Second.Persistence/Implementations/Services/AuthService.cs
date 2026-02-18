@@ -89,6 +89,11 @@ namespace Second.Persistence.Implementations.Services
                 throw new UnauthorizedAppException("Invalid email or password.", "invalid_credentials");
             }
 
+            if (!user.EmailVerified)
+            {
+                throw new UnauthorizedAppException("Please verify your email before logging in.", "email_not_verified");
+            }
+
             var (token, expiresAtUtc) = _tokenService.GenerateToken(user);
             return new AuthResponseDto
             {
