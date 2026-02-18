@@ -34,7 +34,7 @@ namespace Second.Persistence.Tests
         }
 
         [Fact]
-        public void AddPersistence_UsesSmtpEmailSender_WhenEmailEnabled()
+        public void AddPersistence_UsesMailKitEmailSender_WhenEmailEnabled()
         {
             var configuration = new ConfigurationBuilder()
                 .AddInMemoryCollection(new Dictionary<string, string?>
@@ -62,7 +62,7 @@ namespace Second.Persistence.Tests
 
             var emailSender = scope.ServiceProvider.GetRequiredService<IEmailSender>();
 
-            Assert.IsType<SmtpEmailSender>(emailSender);
+            Assert.IsType<MailKitEmailSender>(emailSender);
         }
     }
 }

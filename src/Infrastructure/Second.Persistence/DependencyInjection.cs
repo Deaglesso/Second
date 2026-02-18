@@ -1,3 +1,4 @@
+using System.Net.Mail;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -26,10 +27,10 @@ namespace Second.Persistence
                 .Bind(configuration.GetSection(EmailOptions.SectionName))
                 .Validate(options =>
                     !options.Enabled ||
-                    (!string.IsNullOrWhiteSpace(options.FromAddress) &&
+                    (IsValidEmailAddress(options.FromAddress) &&
                      !string.IsNullOrWhiteSpace(options.SmtpHost) &&
                      options.SmtpPort is > 0 and <= 65535 &&
-                     options.TimeoutMilliseconds >= 1000 &&
+                     options.TimeoutMilliseconds is >= 1000 and <= 120000 &&
                      (options.UseDefaultCredentials ||
                       (!string.IsNullOrWhiteSpace(options.Username) && !string.IsNullOrWhiteSpace(options.Password)))),
                     "Invalid Email configuration. Ensure required SMTP settings are provided when Email:Enabled is true.")
@@ -58,12 +59,12 @@ namespace Second.Persistence
             {
                 var emailOptions = serviceProvider.GetRequiredService<IOptions<EmailOptions>>().Value;
                 return emailOptions.Enabled
-                    ? serviceProvider.GetRequiredService<SmtpEmailSender>()
+                    ? serviceProvider.GetRequiredService<MailKitEmailSender>()
                     : serviceProvider.GetRequiredService<LogEmailSender>();
             });
 
             services.AddScoped<LogEmailSender>();
-            services.AddScoped<SmtpEmailSender>();
+            services.AddScoped<MailKitEmailSender>();
             services.AddScoped<IAuthService, AuthService>();
             services.AddScoped<IUserAuthorizationService, UserAuthorizationService>();
             services.AddScoped<IProductService, ProductService>();
@@ -72,6 +73,19 @@ namespace Second.Persistence
             services.AddScoped<IEntityValidationService, EntityValidationService>();
 
             return services;
+        }
+
+        private static bool IsValidEmailAddress(string email)
+        {
+            try
+            {
+                _ = new MailAddress(email);
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
         }
     }
 }
