@@ -13,8 +13,10 @@ namespace Second.Application.Dtos.Requests
 
         public string? PriceText { get; init; }
 
+        public int Price { get; init; }
+
         public ProductCondition Condition { get; init; }
 
-        public bool IsActive { get; init; }
+        public ProductStatus Status { get; init; }
     }
 }

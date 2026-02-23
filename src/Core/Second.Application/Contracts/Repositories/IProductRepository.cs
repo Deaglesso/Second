@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using Second.Application.Dtos.Requests;
 using Second.Domain.Entities;
 
 namespace Second.Application.Contracts.Repositories
@@ -17,6 +18,7 @@ namespace Second.Application.Contracts.Repositories
             CancellationToken cancellationToken = default);
 
         Task<(IReadOnlyList<Product> Items, int TotalCount)> GetActiveAsync(
+            GetActiveProductsRequest request,
             int skip,
             int take,
             CancellationToken cancellationToken = default);

@@ -44,7 +44,7 @@ namespace Second.Persistence.Implementations.Services
         {
             var activeListings = await _dbContext.Products.AsNoTracking().CountAsync(product =>
                 product.SellerUserId == sellerUserId &&
-                product.IsActive &&
+                product.Status == ProductStatus.Active &&
                 (!excludedProductId.HasValue || product.Id != excludedProductId.Value), cancellationToken);
 
             return activeListings < maxActiveListings;
@@ -75,7 +75,7 @@ namespace Second.Persistence.Implementations.Services
         public async Task<bool> ProductIsActiveAsync(Guid productId, CancellationToken cancellationToken = default)
         {
             return await _dbContext.Products.AsNoTracking()
-                .AnyAsync(product => product.Id == productId && product.IsActive, cancellationToken);
+                .AnyAsync(product => product.Id == productId && product.Status == ProductStatus.Active, cancellationToken);
         }
 
         public async Task<bool> SellerMatchesProductAsync(Guid productId, Guid sellerUserId, CancellationToken cancellationToken = default)

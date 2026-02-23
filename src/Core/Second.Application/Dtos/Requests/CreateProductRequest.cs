@@ -14,6 +14,8 @@ namespace Second.Application.Dtos.Requests
 
         public string? PriceText { get; init; }
 
+        public int Price { get; init; }
+
         public ProductCondition Condition { get; init; }
 
         public IReadOnlyList<string> ImageUrls { get; init; } = Array.Empty<string>();

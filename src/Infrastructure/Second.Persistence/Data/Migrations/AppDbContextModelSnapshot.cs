@@ -116,11 +116,11 @@ namespace Second.Persistence.Data.Migrations
                         .HasMaxLength(2000)
                         .HasColumnType("nvarchar(2000)");
 
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
-
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
+
+                    b.Property<int>("Price")
+                        .HasColumnType("int");
 
                     b.Property<string>("PriceText")
                         .HasMaxLength(100)
@@ -128,6 +128,11 @@ namespace Second.Persistence.Data.Migrations
 
                     b.Property<Guid>("SellerUserId")
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
 
                     b.Property<string>("Title")
                         .IsRequired()
@@ -140,6 +145,8 @@ namespace Second.Persistence.Data.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("SellerUserId");
+
+                    b.HasIndex("Price");
 
                     b.ToTable("Products");
                 });

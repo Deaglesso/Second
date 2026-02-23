@@ -17,6 +17,10 @@ namespace Second.Application.Contracts.Services
 
         Task<PagedResult<ProductDto>> GetActiveAsync(PageRequest pageRequest, CancellationToken cancellationToken = default);
 
+        Task<PagedResult<ProductDto>> GetActiveAsync(GetActiveProductsRequest request, PageRequest pageRequest, CancellationToken cancellationToken = default);
+
+        Task DeleteAsync(Guid productId, Guid actorUserId, bool isAdmin, CancellationToken cancellationToken = default);
+
         Task<ProductDto> UpdateAsync(UpdateProductRequest request, CancellationToken cancellationToken = default);
 
         Task<ProductImageDto> AddImageAsync(AddProductImageRequest request, CancellationToken cancellationToken = default);

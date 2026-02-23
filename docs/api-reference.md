@@ -39,16 +39,16 @@ It provides a single HTTP API for all primary marketplace operations so web/mobi
 ### Architecture overview
 
 - **Protocol:** REST (JSON over HTTP)
-- **Style:** Resource-based controllers (`/api/auth`, `/api/products`, `/api/chats`, etc.)
+- **Style:** Resource-based controllers (`/api/v1/auth`, `/api/v1/products`, `/api/v1/chats`, etc.)
 - **Storage:** SQL Server for persistent data, Redis for token revocation checks.
 
 ### Base URL, versioning, environments
 
 - **Local (Docker default):** `http://localhost:8080`
 - **Base API prefix:** `/api`
-- **Current versioning strategy:** no explicit URI version segment yet (for example no `/v1`).
+- **Current versioning strategy:** URI versioning via `/api/v1/...`.
 
-> **Note:** If versioning is introduced later, prefer `/api/v1/...` and keep a migration window.
+> **Note:** Current stable base path is `/api/v1/...`. Introduce `/api/v2/...` for future breaking changes and keep a migration window.
 
 Suggested environments:
 
@@ -69,9 +69,9 @@ Authorization: Bearer <accessToken>
 
 ### Step-by-step setup
 
-1. Register via `POST /api/auth/register`.
+1. Register via `POST /api/v1/auth/register`.
 2. Verify email (`request-email-verification` -> `verify-email`).
-3. Log in via `POST /api/auth/login`.
+3. Log in via `POST /api/v1/auth/login`.
 4. Store `accessToken` securely in memory/session state.
 5. Send token in `Authorization` for protected routes.
 
@@ -79,7 +79,7 @@ Authorization: Bearer <accessToken>
 
 - JWT includes `sub`, `jti`, `email`, `nameidentifier`, and `role` claims.
 - Expiry is controlled by backend configuration (`Jwt:ExpiresInMinutes`, default 60).
-- `POST /api/auth/logout` revokes token `jti` (Redis-backed).
+- `POST /api/v1/auth/logout` revokes token `jti` (Redis-backed).
 
 > **Warning:** No refresh-token endpoint currently exists. Re-authenticate when token expires.
 
@@ -126,33 +126,33 @@ EMAIL="frontend.demo.$(date +%s)@example.com"
 PASSWORD="StrongPass1"
 
 # Register
-REGISTER_RESPONSE=$(curl -sS -X POST "$BASE_URL/api/auth/register" \
+REGISTER_RESPONSE=$(curl -sS -X POST "$BASE_URL/api/v1/auth/register" \
   -H "Content-Type: application/json" \
   -d "{\"email\":\"$EMAIL\",\"password\":\"$PASSWORD\"}")
 
 echo "$REGISTER_RESPONSE"
 
 # Request verification email
-curl -sS -X POST "$BASE_URL/api/auth/request-email-verification" \
+curl -sS -X POST "$BASE_URL/api/v1/auth/request-email-verification" \
   -H "Content-Type: application/json" \
   -d "{\"email\":\"$EMAIL\"}" | jq
 
 # Manually read token from email/log and set:
 VERIFY_TOKEN="${VERIFY_TOKEN:?Set VERIFY_TOKEN from verification email link}"
 
-curl -sS -X POST "$BASE_URL/api/auth/verify-email" \
+curl -sS -X POST "$BASE_URL/api/v1/auth/verify-email" \
   -H "Content-Type: application/json" \
   -d "{\"token\":\"$VERIFY_TOKEN\"}" | jq
 
 # Login
-LOGIN_RESPONSE=$(curl -sS -X POST "$BASE_URL/api/auth/login" \
+LOGIN_RESPONSE=$(curl -sS -X POST "$BASE_URL/api/v1/auth/login" \
   -H "Content-Type: application/json" \
   -d "{\"email\":\"$EMAIL\",\"password\":\"$PASSWORD\"}")
 
 ACCESS_TOKEN=$(echo "$LOGIN_RESPONSE" | jq -r '.accessToken')
 
 # Me
-curl -sS "$BASE_URL/api/auth/me" \
+curl -sS "$BASE_URL/api/v1/auth/me" \
   -H "Authorization: Bearer $ACCESS_TOKEN" | jq
 ```
 
@@ -183,19 +183,19 @@ async function get(path, token) {
 }
 
 (async () => {
-  const register = await post('/api/auth/register', { email, password });
+  const register = await post('/api/v1/auth/register', { email, password });
   console.log('register', register.status, register.json);
 
-  await post('/api/auth/request-email-verification', { email });
+  await post('/api/v1/auth/request-email-verification', { email });
   console.log('Requested verification email; now verify manually from email/log token.');
 
-  // const verify = await post('/api/auth/verify-email', { token: process.env.VERIFY_TOKEN });
+  // const verify = await post('/api/v1/auth/verify-email', { token: process.env.VERIFY_TOKEN });
   // console.log('verify', verify.status, verify.json);
 
-  const login = await post('/api/auth/login', { email, password });
+  const login = await post('/api/v1/auth/login', { email, password });
   console.log('login', login.status, login.json);
 
-  const me = await get('/api/auth/me', login.json.accessToken);
+  const me = await get('/api/v1/auth/me', login.json.accessToken);
   console.log('me', me.status, me.json);
 })();
 ```
@@ -211,20 +211,20 @@ BASE_URL = "http://localhost:8080"
 email = f"frontend.demo.{int(time.time())}@example.com"
 password = "StrongPass1"
 
-register = requests.post(f"{BASE_URL}/api/auth/register", json={"email": email, "password": password})
+register = requests.post(f"{BASE_URL}/api/v1/auth/register", json={"email": email, "password": password})
 print("register", register.status_code, register.json())
 
-requests.post(f"{BASE_URL}/api/auth/request-email-verification", json={"email": email})
+requests.post(f"{BASE_URL}/api/v1/auth/request-email-verification", json={"email": email})
 print("verification requested; verify email manually with token from email/log")
 
-# verify = requests.post(f"{BASE_URL}/api/auth/verify-email", json={"token": os.environ["VERIFY_TOKEN"]})
+# verify = requests.post(f"{BASE_URL}/api/v1/auth/verify-email", json={"token": os.environ["VERIFY_TOKEN"]})
 # print("verify", verify.status_code, verify.json())
 
-login = requests.post(f"{BASE_URL}/api/auth/login", json={"email": email, "password": password})
+login = requests.post(f"{BASE_URL}/api/v1/auth/login", json={"email": email, "password": password})
 print("login", login.status_code, login.json())
 
 token = login.json()["accessToken"]
-me = requests.get(f"{BASE_URL}/api/auth/me", headers={"Authorization": f"Bearer {token}"})
+me = requests.get(f"{BASE_URL}/api/v1/auth/me", headers={"Authorization": f"Bearer {token}"})
 print("me", me.status_code, me.json())
 ```
 
@@ -252,8 +252,8 @@ print("me", me.status_code, me.json())
 
 ### Idempotency conventions
 
-- `DELETE /api/products/images/{imageId}` is idempotent: returns `204` even if already removed.
-- `POST /api/chats` behaves quasi-idempotent for same product/buyer/seller triple by returning existing room.
+- `DELETE /api/v1/products/images/{imageId}` is idempotent: returns `204` even if already removed.
+- `POST /api/v1/chats` behaves quasi-idempotent for same product/buyer/seller triple by returning existing room.
 
 ### Pagination conventions
 
@@ -263,7 +263,7 @@ print("me", me.status_code, me.json())
 ### Filtering and sorting conventions
 
 - Filtering examples currently exposed:
-  - products by active state (`/api/products/active`)
+  - products by active state (`/api/v1/products/active`)
   - products by seller
   - reports by target
 - Explicit client-provided sorting parameters are not currently exposed.
@@ -302,9 +302,9 @@ print("me", me.status_code, me.json())
 
 ---
 
-## 5.1 Auth (`/api/auth`)
+## 5.1 Auth (`/api/v1/auth`)
 
-### 1) POST `/api/auth/register`
+### 1) POST `/api/v1/auth/register`
 
 Creates a new user account.
 
@@ -316,14 +316,14 @@ Creates a new user account.
 
 **cURL**
 ```bash
-curl -sS -X POST "http://localhost:8080/api/auth/register" \
+curl -sS -X POST "http://localhost:8080/api/v1/auth/register" \
   -H "Content-Type: application/json" \
   -d '{"email":"alice.register@example.com","password":"StrongPass1"}'
 ```
 
 **JavaScript**
 ```js
-await fetch('http://localhost:8080/api/auth/register', {
+await fetch('http://localhost:8080/api/v1/auth/register', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({ email: 'alice.register@example.com', password: 'StrongPass1' })
@@ -355,7 +355,7 @@ await fetch('http://localhost:8080/api/auth/register', {
 
 ---
 
-### 2) POST `/api/auth/login`
+### 2) POST `/api/v1/auth/login`
 
 Authenticates a verified user.
 
@@ -364,14 +364,14 @@ Authenticates a verified user.
 
 **cURL**
 ```bash
-curl -sS -X POST "http://localhost:8080/api/auth/login" \
+curl -sS -X POST "http://localhost:8080/api/v1/auth/login" \
   -H "Content-Type: application/json" \
   -d '{"email":"alice.register@example.com","password":"StrongPass1"}'
 ```
 
 **JavaScript**
 ```js
-await fetch('http://localhost:8080/api/auth/login', {
+await fetch('http://localhost:8080/api/v1/auth/login', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({ email: 'alice.register@example.com', password: 'StrongPass1' })
@@ -406,7 +406,7 @@ await fetch('http://localhost:8080/api/auth/login', {
 
 ---
 
-### 3) POST `/api/auth/logout`
+### 3) POST `/api/v1/auth/logout`
 
 Revokes current JWT (`jti`) and clears auth cookies.
 
@@ -415,13 +415,13 @@ Revokes current JWT (`jti`) and clears auth cookies.
 
 **cURL**
 ```bash
-curl -sS -X POST "http://localhost:8080/api/auth/logout" \
+curl -sS -X POST "http://localhost:8080/api/v1/auth/logout" \
   -H "Authorization: Bearer $ACCESS_TOKEN"
 ```
 
 **JavaScript**
 ```js
-await fetch('http://localhost:8080/api/auth/logout', {
+await fetch('http://localhost:8080/api/v1/auth/logout', {
   method: 'POST',
   headers: { Authorization: `Bearer ${accessToken}` }
 });
@@ -436,7 +436,7 @@ await fetch('http://localhost:8080/api/auth/logout', {
 
 ---
 
-### 4) POST `/api/auth/request-email-verification`
+### 4) POST `/api/v1/auth/request-email-verification`
 
 Requests verification email (generic response for enumeration safety).
 
@@ -445,14 +445,14 @@ Requests verification email (generic response for enumeration safety).
 
 **cURL**
 ```bash
-curl -sS -X POST "http://localhost:8080/api/auth/request-email-verification" \
+curl -sS -X POST "http://localhost:8080/api/v1/auth/request-email-verification" \
   -H "Content-Type: application/json" \
   -d '{"email":"alice.register@example.com"}'
 ```
 
 **JavaScript**
 ```js
-await fetch('http://localhost:8080/api/auth/request-email-verification', {
+await fetch('http://localhost:8080/api/v1/auth/request-email-verification', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({ email: 'alice.register@example.com' })
@@ -468,7 +468,7 @@ await fetch('http://localhost:8080/api/auth/request-email-verification', {
 
 ---
 
-### 5) POST `/api/auth/verify-email`
+### 5) POST `/api/v1/auth/verify-email`
 
 Verifies account with emailed token.
 
@@ -477,7 +477,7 @@ Verifies account with emailed token.
 
 **cURL**
 ```bash
-curl -sS -X POST "http://localhost:8080/api/auth/verify-email" \
+curl -sS -X POST "http://localhost:8080/api/v1/auth/verify-email" \
   -H "Content-Type: application/json" \
   -d '{"token":"${VERIFY_TOKEN}"}'
 ```
@@ -485,7 +485,7 @@ curl -sS -X POST "http://localhost:8080/api/auth/verify-email" \
 **JavaScript**
 ```js
 const verifyToken = process.env.VERIFY_TOKEN;
-await fetch('http://localhost:8080/api/auth/verify-email', {
+await fetch('http://localhost:8080/api/v1/auth/verify-email', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({ token: verifyToken })
@@ -511,7 +511,7 @@ await fetch('http://localhost:8080/api/auth/verify-email', {
 
 ---
 
-### 6) POST `/api/auth/forgot-password`
+### 6) POST `/api/v1/auth/forgot-password`
 
 Starts reset flow with generic response.
 
@@ -520,14 +520,14 @@ Starts reset flow with generic response.
 
 **cURL**
 ```bash
-curl -sS -X POST "http://localhost:8080/api/auth/forgot-password" \
+curl -sS -X POST "http://localhost:8080/api/v1/auth/forgot-password" \
   -H "Content-Type: application/json" \
   -d '{"email":"alice.register@example.com"}'
 ```
 
 **JavaScript**
 ```js
-await fetch('http://localhost:8080/api/auth/forgot-password', {
+await fetch('http://localhost:8080/api/v1/auth/forgot-password', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({ email: 'alice.register@example.com' })
@@ -543,7 +543,7 @@ await fetch('http://localhost:8080/api/auth/forgot-password', {
 
 ---
 
-### 7) POST `/api/auth/reset-password`
+### 7) POST `/api/v1/auth/reset-password`
 
 Completes password reset with token.
 
@@ -554,7 +554,7 @@ Completes password reset with token.
 
 **cURL**
 ```bash
-curl -sS -X POST "http://localhost:8080/api/auth/reset-password" \
+curl -sS -X POST "http://localhost:8080/api/v1/auth/reset-password" \
   -H "Content-Type: application/json" \
   -d '{"token":"'"$RESET_TOKEN"'","newPassword":"NewStrong1"}'
 ```
@@ -562,7 +562,7 @@ curl -sS -X POST "http://localhost:8080/api/auth/reset-password" \
 **JavaScript**
 ```js
 const resetToken = process.env.RESET_TOKEN;
-await fetch('http://localhost:8080/api/auth/reset-password', {
+await fetch('http://localhost:8080/api/v1/auth/reset-password', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({ token: resetToken, newPassword: 'NewStrong1' })
@@ -588,7 +588,7 @@ await fetch('http://localhost:8080/api/auth/reset-password', {
 
 ---
 
-### 8) POST `/api/auth/become-seller`
+### 8) POST `/api/v1/auth/become-seller`
 
 Upgrades current authenticated `User` role to `Seller` and returns fresh JWT.
 
@@ -596,13 +596,13 @@ Upgrades current authenticated `User` role to `Seller` and returns fresh JWT.
 
 **cURL**
 ```bash
-curl -sS -X POST "http://localhost:8080/api/auth/become-seller" \
+curl -sS -X POST "http://localhost:8080/api/v1/auth/become-seller" \
   -H "Authorization: Bearer $ACCESS_TOKEN"
 ```
 
 **JavaScript**
 ```js
-await fetch('http://localhost:8080/api/auth/become-seller', {
+await fetch('http://localhost:8080/api/v1/auth/become-seller', {
   method: 'POST',
   headers: { Authorization: `Bearer ${accessToken}` }
 });
@@ -614,7 +614,7 @@ await fetch('http://localhost:8080/api/auth/become-seller', {
 
 ---
 
-### 9) GET `/api/auth/me`
+### 9) GET `/api/v1/auth/me`
 
 Returns current user profile.
 
@@ -622,13 +622,13 @@ Returns current user profile.
 
 **cURL**
 ```bash
-curl -sS "http://localhost:8080/api/auth/me" \
+curl -sS "http://localhost:8080/api/v1/auth/me" \
   -H "Authorization: Bearer $ACCESS_TOKEN"
 ```
 
 **JavaScript**
 ```js
-await fetch('http://localhost:8080/api/auth/me', {
+await fetch('http://localhost:8080/api/v1/auth/me', {
   headers: { Authorization: `Bearer ${accessToken}` }
 });
 ```
@@ -650,9 +650,9 @@ await fetch('http://localhost:8080/api/auth/me', {
 
 ---
 
-## 5.2 Products (`/api/products`)
+## 5.2 Products (`/api/v1/products`)
 
-### 10) POST `/api/products`
+### 10) POST `/api/v1/products`
 
 Creates a product (seller/admin only).
 
@@ -662,12 +662,13 @@ Creates a product (seller/admin only).
   - `title` (string, required, <=200)
   - `description` (string, required, <=2000)
   - `priceText` (string, optional, <=100)
+  - `price` (integer cents, required, >=0)
   - `condition` (`New|LikeNew|Used|HeavilyUsed|Vintage`)
   - `imageUrls` (string[], optional, each <=500)
 
 **cURL**
 ```bash
-curl -sS -X POST "http://localhost:8080/api/products" \
+curl -sS -X POST "http://localhost:8080/api/v1/products" \
   -H "Authorization: Bearer $ACCESS_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -675,6 +676,7 @@ curl -sS -X POST "http://localhost:8080/api/products" \
     "title":"iPhone 14",
     "description":"Used, excellent condition",
     "priceText":"$550",
+    "price":55000,
     "condition":"Used",
     "imageUrls":["https://picsum.photos/seed/iphone14a/800/600"]
   }'
@@ -682,7 +684,7 @@ curl -sS -X POST "http://localhost:8080/api/products" \
 
 **JavaScript**
 ```js
-await fetch('http://localhost:8080/api/products', {
+await fetch('http://localhost:8080/api/v1/products', {
   method: 'POST',
   headers: {
     Authorization: `Bearer ${accessToken}`,
@@ -693,6 +695,7 @@ await fetch('http://localhost:8080/api/products', {
     title: 'iPhone 14',
     description: 'Used, excellent condition',
     priceText: '$550',
+    price: 55000,
     condition: 'Used',
     imageUrls: ['https://picsum.photos/seed/iphone14a/800/600']
   })
@@ -715,7 +718,7 @@ await fetch('http://localhost:8080/api/products', {
 
 ---
 
-### 11) GET `/api/products/{productId}`
+### 11) GET `/api/v1/products/{productId}`
 
 Returns one product.
 
@@ -724,12 +727,12 @@ Returns one product.
 
 **cURL**
 ```bash
-curl -sS "http://localhost:8080/api/products/11111111-1111-1111-1111-111111111111"
+curl -sS "http://localhost:8080/api/v1/products/11111111-1111-1111-1111-111111111111"
 ```
 
 **JavaScript**
 ```js
-await fetch('http://localhost:8080/api/products/11111111-1111-1111-1111-111111111111');
+await fetch('http://localhost:8080/api/v1/products/11111111-1111-1111-1111-111111111111');
 ```
 
 **Success (`200`)**: `ProductDto`
@@ -748,21 +751,21 @@ await fetch('http://localhost:8080/api/products/11111111-1111-1111-1111-11111111
 
 ---
 
-### 12) GET `/api/products/active`
+### 12) GET `/api/v1/products/active`
 
 Returns paged active products.
 
 - **Auth:** none
-- **Query:** `pageNumber` (int >=1), `pageSize` (1..100)
+- **Query:** `pageNumber` (int >=1), `pageSize` (1..100), `q`, `condition`, `minPrice`, `maxPrice`, `sortBy` (`newest|price_asc|price_desc`)
 
 **cURL**
 ```bash
-curl -sS "http://localhost:8080/api/products/active?pageNumber=1&pageSize=20"
+curl -sS "http://localhost:8080/api/v1/products/active?pageNumber=1&pageSize=20&q=iphone&condition=Used&minPrice=30000&maxPrice=70000&sortBy=price_asc"
 ```
 
 **JavaScript**
 ```js
-await fetch('http://localhost:8080/api/products/active?pageNumber=1&pageSize=20');
+await fetch('http://localhost:8080/api/v1/products/active?pageNumber=1&pageSize=20&q=iphone&condition=Used&minPrice=30000&maxPrice=70000&sortBy=price_asc');
 ```
 
 **Success (`200`)**: `PagedResult<ProductDto>`
@@ -771,7 +774,7 @@ await fetch('http://localhost:8080/api/products/active?pageNumber=1&pageSize=20'
 
 ---
 
-### 13) GET `/api/products/by-seller/{sellerUserId}`
+### 13) GET `/api/v1/products/by-seller/{sellerUserId}`
 
 Returns paged products for one seller.
 
@@ -781,12 +784,12 @@ Returns paged products for one seller.
 
 **cURL**
 ```bash
-curl -sS "http://localhost:8080/api/products/by-seller/5ef5cb3d-e1e8-4d9d-95f1-6d5f2fca1a60?pageNumber=1&pageSize=20"
+curl -sS "http://localhost:8080/api/v1/products/by-seller/5ef5cb3d-e1e8-4d9d-95f1-6d5f2fca1a60?pageNumber=1&pageSize=20"
 ```
 
 **JavaScript**
 ```js
-await fetch('http://localhost:8080/api/products/by-seller/5ef5cb3d-e1e8-4d9d-95f1-6d5f2fca1a60?pageNumber=1&pageSize=20');
+await fetch('http://localhost:8080/api/v1/products/by-seller/5ef5cb3d-e1e8-4d9d-95f1-6d5f2fca1a60?pageNumber=1&pageSize=20');
 ```
 
 **Success (`200`)**: `PagedResult<ProductDto>`
@@ -795,31 +798,32 @@ await fetch('http://localhost:8080/api/products/by-seller/5ef5cb3d-e1e8-4d9d-95f
 
 ---
 
-### 14) PUT `/api/products/{productId}`
+### 14) PUT `/api/v1/products/{productId}`
 
 Updates product metadata and active state.
 
 - **Auth:** required (`Seller` or `Admin`)
 - **Path:** `productId` (guid)
-- **Body:** `title`, `description`, `priceText`, `condition`, `isActive`
+- **Body:** `title`, `description`, `priceText`, `price`, `condition`, `status` (`Active|Sold|Paused|Archived`)
 
 **cURL**
 ```bash
-curl -sS -X PUT "http://localhost:8080/api/products/11111111-1111-1111-1111-111111111111" \
+curl -sS -X PUT "http://localhost:8080/api/v1/products/11111111-1111-1111-1111-111111111111" \
   -H "Authorization: Bearer $ACCESS_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
     "title":"iPhone 14 - price drop",
     "description":"Used, excellent condition, includes case",
     "priceText":"$520",
+    "price":52000,
     "condition":"Used",
-    "isActive":true
+    "status":"Active"
   }'
 ```
 
 **JavaScript**
 ```js
-await fetch('http://localhost:8080/api/products/11111111-1111-1111-1111-111111111111', {
+await fetch('http://localhost:8080/api/v1/products/11111111-1111-1111-1111-111111111111', {
   method: 'PUT',
   headers: {
     Authorization: `Bearer ${accessToken}`,
@@ -829,8 +833,9 @@ await fetch('http://localhost:8080/api/products/11111111-1111-1111-1111-11111111
     title: 'iPhone 14 - price drop',
     description: 'Used, excellent condition, includes case',
     priceText: '$520',
+    price: 52000,
     condition: 'Used',
-    isActive: true
+    status: "Active"
   })
 });
 ```
@@ -841,7 +846,7 @@ await fetch('http://localhost:8080/api/products/11111111-1111-1111-1111-11111111
 
 ---
 
-### 15) POST `/api/products/{productId}/images`
+### 15) POST `/api/v1/products/{productId}/images`
 
 Adds product image.
 
@@ -853,7 +858,7 @@ Adds product image.
 
 **cURL**
 ```bash
-curl -sS -X POST "http://localhost:8080/api/products/11111111-1111-1111-1111-111111111111/images" \
+curl -sS -X POST "http://localhost:8080/api/v1/products/11111111-1111-1111-1111-111111111111/images" \
   -H "Authorization: Bearer $ACCESS_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"imageUrl":"https://picsum.photos/seed/iphone14b/800/600","order":1}'
@@ -861,7 +866,7 @@ curl -sS -X POST "http://localhost:8080/api/products/11111111-1111-1111-1111-111
 
 **JavaScript**
 ```js
-await fetch('http://localhost:8080/api/products/11111111-1111-1111-1111-111111111111/images', {
+await fetch('http://localhost:8080/api/v1/products/11111111-1111-1111-1111-111111111111/images', {
   method: 'POST',
   headers: {
     Authorization: `Bearer ${accessToken}`,
@@ -885,7 +890,7 @@ await fetch('http://localhost:8080/api/products/11111111-1111-1111-1111-11111111
 
 ---
 
-### 16) DELETE `/api/products/images/{imageId}`
+### 16) DELETE `/api/v1/products/images/{imageId}`
 
 Removes product image.
 
@@ -894,13 +899,13 @@ Removes product image.
 
 **cURL**
 ```bash
-curl -i -X DELETE "http://localhost:8080/api/products/images/d69b55c6-d805-4ec5-95d6-3a72f2a94f72" \
+curl -i -X DELETE "http://localhost:8080/api/v1/products/images/d69b55c6-d805-4ec5-95d6-3a72f2a94f72" \
   -H "Authorization: Bearer $ACCESS_TOKEN"
 ```
 
 **JavaScript**
 ```js
-await fetch('http://localhost:8080/api/products/images/d69b55c6-d805-4ec5-95d6-3a72f2a94f72', {
+await fetch('http://localhost:8080/api/v1/products/images/d69b55c6-d805-4ec5-95d6-3a72f2a94f72', {
   method: 'DELETE',
   headers: { Authorization: `Bearer ${accessToken}` }
 });
@@ -914,11 +919,31 @@ await fetch('http://localhost:8080/api/products/images/d69b55c6-d805-4ec5-95d6-3
 
 ---
 
-## 5.3 Chats (`/api/chats`)
+### 17) DELETE `/api/v1/products/{productId}`
+
+Archives a product (soft delete) by setting `status` to `Archived`.
+
+- **Auth:** required (`Seller` or `Admin`)
+- **Path:** `productId` (guid)
+- **Authorization:** owner seller or admin.
+
+**cURL**
+```bash
+curl -i -X DELETE "http://localhost:8080/api/v1/products/11111111-1111-1111-1111-111111111111" \
+  -H "Authorization: Bearer $ACCESS_TOKEN"
+```
+
+**Success (`204`)** no body.
+
+**Status codes:** `204`, `401`, `403`.
+
+---
+
+## 5.3 Chats (`/api/v1/chats`)
 
 > **Warning:** Controller currently has no `[Authorize]`. Protect through gateway or backend update before production.
 
-### 17) POST `/api/chats`
+### 17) POST `/api/v1/chats`
 
 Starts chat room or returns existing room for same product/buyer/seller.
 
@@ -927,7 +952,7 @@ Starts chat room or returns existing room for same product/buyer/seller.
 
 **cURL**
 ```bash
-curl -sS -X POST "http://localhost:8080/api/chats" \
+curl -sS -X POST "http://localhost:8080/api/v1/chats" \
   -H "Content-Type: application/json" \
   -d '{
     "productId":"11111111-1111-1111-1111-111111111111",
@@ -938,7 +963,7 @@ curl -sS -X POST "http://localhost:8080/api/chats" \
 
 **JavaScript**
 ```js
-await fetch('http://localhost:8080/api/chats', {
+await fetch('http://localhost:8080/api/v1/chats', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({
@@ -955,7 +980,7 @@ await fetch('http://localhost:8080/api/chats', {
 
 ---
 
-### 18) GET `/api/chats/{chatRoomId}`
+### 18) GET `/api/v1/chats/{chatRoomId}`
 
 Returns chat room by id.
 
@@ -964,12 +989,12 @@ Returns chat room by id.
 
 **cURL**
 ```bash
-curl -sS "http://localhost:8080/api/chats/33333333-3333-3333-3333-333333333333"
+curl -sS "http://localhost:8080/api/v1/chats/33333333-3333-3333-3333-333333333333"
 ```
 
 **JavaScript**
 ```js
-await fetch('http://localhost:8080/api/chats/33333333-3333-3333-3333-333333333333');
+await fetch('http://localhost:8080/api/v1/chats/33333333-3333-3333-3333-333333333333');
 ```
 
 **Success (`200`)**: `ChatRoomDto`
@@ -988,7 +1013,7 @@ await fetch('http://localhost:8080/api/chats/33333333-3333-3333-3333-33333333333
 
 ---
 
-### 19) GET `/api/chats/by-user/{userId}`
+### 19) GET `/api/v1/chats/by-user/{userId}`
 
 Returns paged chat rooms where user is participant.
 
@@ -998,12 +1023,12 @@ Returns paged chat rooms where user is participant.
 
 **cURL**
 ```bash
-curl -sS "http://localhost:8080/api/chats/by-user/22222222-2222-2222-2222-222222222222?pageNumber=1&pageSize=20"
+curl -sS "http://localhost:8080/api/v1/chats/by-user/22222222-2222-2222-2222-222222222222?pageNumber=1&pageSize=20"
 ```
 
 **JavaScript**
 ```js
-await fetch('http://localhost:8080/api/chats/by-user/22222222-2222-2222-2222-222222222222?pageNumber=1&pageSize=20');
+await fetch('http://localhost:8080/api/v1/chats/by-user/22222222-2222-2222-2222-222222222222?pageNumber=1&pageSize=20');
 ```
 
 **Success (`200`)**: `PagedResult<ChatRoomDto>`
@@ -1012,7 +1037,7 @@ await fetch('http://localhost:8080/api/chats/by-user/22222222-2222-2222-2222-222
 
 ---
 
-### 20) POST `/api/chats/{chatRoomId}/messages`
+### 20) POST `/api/v1/chats/{chatRoomId}/messages`
 
 Sends a message to chat room.
 
@@ -1024,7 +1049,7 @@ Sends a message to chat room.
 
 **cURL**
 ```bash
-curl -sS -X POST "http://localhost:8080/api/chats/33333333-3333-3333-3333-333333333333/messages" \
+curl -sS -X POST "http://localhost:8080/api/v1/chats/33333333-3333-3333-3333-333333333333/messages" \
   -H "Content-Type: application/json" \
   -d '{
     "senderId":"22222222-2222-2222-2222-222222222222",
@@ -1034,7 +1059,7 @@ curl -sS -X POST "http://localhost:8080/api/chats/33333333-3333-3333-3333-333333
 
 **JavaScript**
 ```js
-await fetch('http://localhost:8080/api/chats/33333333-3333-3333-3333-333333333333/messages', {
+await fetch('http://localhost:8080/api/v1/chats/33333333-3333-3333-3333-333333333333/messages', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({
@@ -1050,7 +1075,7 @@ await fetch('http://localhost:8080/api/chats/33333333-3333-3333-3333-33333333333
 
 ---
 
-### 21) GET `/api/chats/{chatRoomId}/messages`
+### 21) GET `/api/v1/chats/{chatRoomId}/messages`
 
 Returns paged messages for chat room.
 
@@ -1060,12 +1085,12 @@ Returns paged messages for chat room.
 
 **cURL**
 ```bash
-curl -sS "http://localhost:8080/api/chats/33333333-3333-3333-3333-333333333333/messages?pageNumber=1&pageSize=20"
+curl -sS "http://localhost:8080/api/v1/chats/33333333-3333-3333-3333-333333333333/messages?pageNumber=1&pageSize=20"
 ```
 
 **JavaScript**
 ```js
-await fetch('http://localhost:8080/api/chats/33333333-3333-3333-3333-333333333333/messages?pageNumber=1&pageSize=20');
+await fetch('http://localhost:8080/api/v1/chats/33333333-3333-3333-3333-333333333333/messages?pageNumber=1&pageSize=20');
 ```
 
 **Success (`200`)**: `PagedResult<MessageDto>`
@@ -1074,11 +1099,11 @@ await fetch('http://localhost:8080/api/chats/33333333-3333-3333-3333-33333333333
 
 ---
 
-## 5.4 Reports (`/api/reports`)
+## 5.4 Reports (`/api/v1/reports`)
 
 > **Warning:** Controller currently has no `[Authorize]`. Add server-side auth if required by policy.
 
-### 22) POST `/api/reports`
+### 22) POST `/api/v1/reports`
 
 Creates moderation report.
 
@@ -1091,7 +1116,7 @@ Creates moderation report.
 
 **cURL**
 ```bash
-curl -sS -X POST "http://localhost:8080/api/reports" \
+curl -sS -X POST "http://localhost:8080/api/v1/reports" \
   -H "Content-Type: application/json" \
   -d '{
     "reporterId":"22222222-2222-2222-2222-222222222222",
@@ -1103,7 +1128,7 @@ curl -sS -X POST "http://localhost:8080/api/reports" \
 
 **JavaScript**
 ```js
-await fetch('http://localhost:8080/api/reports', {
+await fetch('http://localhost:8080/api/v1/reports', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({
@@ -1121,7 +1146,7 @@ await fetch('http://localhost:8080/api/reports', {
 
 ---
 
-### 23) GET `/api/reports/by-target`
+### 23) GET `/api/v1/reports/by-target`
 
 Returns paged reports for a target entity.
 
@@ -1133,12 +1158,12 @@ Returns paged reports for a target entity.
 
 **cURL**
 ```bash
-curl -sS "http://localhost:8080/api/reports/by-target?targetType=Product&targetId=11111111-1111-1111-1111-111111111111&pageNumber=1&pageSize=20"
+curl -sS "http://localhost:8080/api/v1/reports/by-target?targetType=Product&targetId=11111111-1111-1111-1111-111111111111&pageNumber=1&pageSize=20"
 ```
 
 **JavaScript**
 ```js
-await fetch('http://localhost:8080/api/reports/by-target?targetType=Product&targetId=11111111-1111-1111-1111-111111111111&pageNumber=1&pageSize=20');
+await fetch('http://localhost:8080/api/v1/reports/by-target?targetType=Product&targetId=11111111-1111-1111-1111-111111111111&pageNumber=1&pageSize=20');
 ```
 
 **Success (`200`)**: `PagedResult<ReportDto>`
@@ -1147,7 +1172,7 @@ await fetch('http://localhost:8080/api/reports/by-target?targetType=Product&targ
 
 ---
 
-### 24) GET `/api/reports/by-reporter/{reporterId}`
+### 24) GET `/api/v1/reports/by-reporter/{reporterId}`
 
 Returns paged reports by reporter id.
 
@@ -1157,12 +1182,12 @@ Returns paged reports by reporter id.
 
 **cURL**
 ```bash
-curl -sS "http://localhost:8080/api/reports/by-reporter/22222222-2222-2222-2222-222222222222?pageNumber=1&pageSize=20"
+curl -sS "http://localhost:8080/api/v1/reports/by-reporter/22222222-2222-2222-2222-222222222222?pageNumber=1&pageSize=20"
 ```
 
 **JavaScript**
 ```js
-await fetch('http://localhost:8080/api/reports/by-reporter/22222222-2222-2222-2222-222222222222?pageNumber=1&pageSize=20');
+await fetch('http://localhost:8080/api/v1/reports/by-reporter/22222222-2222-2222-2222-222222222222?pageNumber=1&pageSize=20');
 ```
 
 **Success (`200`)**: `PagedResult<ReportDto>`
@@ -1171,9 +1196,9 @@ await fetch('http://localhost:8080/api/reports/by-reporter/22222222-2222-2222-22
 
 ---
 
-## 5.5 Admin Sellers (`/api/admin/sellers`)
+## 5.5 Admin Sellers (`/api/v1/admin/sellers`)
 
-### 25) PATCH `/api/admin/sellers/{sellerUserId}/listing-limit`
+### 25) PATCH `/api/v1/admin/sellers/{sellerUserId}/listing-limit`
 
 Updates seller listing limit.
 
@@ -1183,7 +1208,7 @@ Updates seller listing limit.
 
 **cURL**
 ```bash
-curl -sS -X PATCH "http://localhost:8080/api/admin/sellers/5ef5cb3d-e1e8-4d9d-95f1-6d5f2fca1a60/listing-limit" \
+curl -sS -X PATCH "http://localhost:8080/api/v1/admin/sellers/5ef5cb3d-e1e8-4d9d-95f1-6d5f2fca1a60/listing-limit" \
   -H "Authorization: Bearer $ADMIN_ACCESS_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"listingLimit":25}'
@@ -1191,7 +1216,7 @@ curl -sS -X PATCH "http://localhost:8080/api/admin/sellers/5ef5cb3d-e1e8-4d9d-95
 
 **JavaScript**
 ```js
-await fetch('http://localhost:8080/api/admin/sellers/5ef5cb3d-e1e8-4d9d-95f1-6d5f2fca1a60/listing-limit', {
+await fetch('http://localhost:8080/api/v1/admin/sellers/5ef5cb3d-e1e8-4d9d-95f1-6d5f2fca1a60/listing-limit', {
   method: 'PATCH',
   headers: {
     Authorization: `Bearer ${adminAccessToken}`,
@@ -1229,7 +1254,7 @@ All failures are returned as `ProblemDetails`-style JSON.
   "title": "Validation Failed",
   "status": 400,
   "detail": "One or more validation errors occurred.",
-  "instance": "/api/auth/register",
+  "instance": "/api/v1/auth/register",
   "traceId": "00-...",
   "timestampUtc": "2026-02-18T14:21:22.1234567Z",
   "errorCode": "validation_failed",
@@ -1330,7 +1355,7 @@ No curated community SDK list is maintained yet.
 
 ### Versioning state
 
-- Current API exposes non-versioned paths (`/api/...`).
+- Current API exposes versioned paths (`/api/v1/...`).
 - No formal semantic API version number is embedded in routes.
 
 ### Deprecation policy (recommended)
@@ -1392,6 +1417,7 @@ Because routes are not versioned yet, adopt:
 ```ts
 export type UserRole = 'User' | 'Seller' | 'Admin';
 export type ProductCondition = 'New' | 'LikeNew' | 'Used' | 'HeavilyUsed' | 'Vintage';
+export type ProductStatus = 'Active' | 'Sold' | 'Paused' | 'Archived';
 export type ReportTargetType = 'Product' | 'Seller' | 'Message';
 
 export interface AuthResponseDto {
@@ -1425,9 +1451,11 @@ export interface ProductDto {
   title: string;
   description: string;
   priceText: string | null;
+  price: number;
   condition: ProductCondition;
-  isActive: boolean;
+  status: ProductStatus;
   createdAt: string;
+  updatedAt: string | null;
   images: ProductImageDto[];
 }
 
