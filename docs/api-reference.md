@@ -1,98 +1,1227 @@
-# Second API — Complete Frontend Integration Documentation
+# Second API Documentation (Frontend-Complete)
 
-This document is a contract-style API reference for the current backend implementation so a frontend can be built without reading backend code.
-
----
-
-## 1) API runtime and base URL
-
-- **Base URL (local Docker default):** `http://localhost:8080`
-- **API prefix:** `/api`
-- **Swagger (Development environment only):** `/swagger`
-- **Static frontend demo files are hosted from API root** (not required for your own frontend).
-
-Reference routes in this doc are written as full relative paths (example: `/api/auth/login`).
+> **Audience:** Mid-level frontend/backend engineers integrating with the Second marketplace API.
+>
+> **Goal:** You should be able to build a complete client integration without opening backend source code.
 
 ---
 
-## 2) Authentication and authorization model
+## 1) Overview & Introduction
 
-### 2.1 Auth type
+Second API powers a marketplace-style workflow with:
 
-- The API uses **JWT Bearer tokens** in the `Authorization` header.
-- Header format:
+- account creation and sign-in,
+- email verification and password recovery,
+- seller onboarding,
+- product listing management,
+- buyer/seller chat,
+- moderation reports,
+- admin controls for seller limits.
+
+### What problem it solves
+
+It provides a single HTTP API for all primary marketplace operations so web/mobile clients can:
+
+1. onboard users,
+2. enforce role-based flows (`User`, `Seller`, `Admin`),
+3. browse and manage listings,
+4. message in listing-specific chat rooms,
+5. file moderation reports.
+
+### Key features and use cases
+
+- JWT authentication with revocation on logout.
+- Role-aware authorization (`SellerOnly`, `Admin` routes).
+- Validation-rich input rules with predictable `ProblemDetails` errors.
+- Consistent pagination response model.
+- Email-based verification/reset workflows.
+
+### Architecture overview
+
+- **Protocol:** REST (JSON over HTTP)
+- **Style:** Resource-based controllers (`/api/auth`, `/api/products`, `/api/chats`, etc.)
+- **Storage:** SQL Server for persistent data, Redis for token revocation checks.
+
+### Base URL, versioning, environments
+
+- **Local (Docker default):** `http://localhost:8080`
+- **Base API prefix:** `/api`
+- **Current versioning strategy:** no explicit URI version segment yet (for example no `/v1`).
+
+> **Note:** If versioning is introduced later, prefer `/api/v1/...` and keep a migration window.
+
+Suggested environments:
+
+- `sandbox` (test data + safe keys)
+- `production` (real users/data)
+
+---
+
+## 2) Authentication & Security
+
+### Auth methods used
+
+- **JWT Bearer** in `Authorization` header.
 
 ```http
 Authorization: Bearer <accessToken>
 ```
 
-### 2.2 Token claims included
+### Step-by-step setup
 
-Access tokens include:
+1. Register via `POST /api/auth/register`.
+2. Verify email (`request-email-verification` -> `verify-email`).
+3. Log in via `POST /api/auth/login`.
+4. Store `accessToken` securely in memory/session state.
+5. Send token in `Authorization` for protected routes.
 
-- `sub` = user id
-- `jti` = token id (used for revocation)
-- `email`
-- `nameidentifier` (user id)
-- `email` (ClaimTypes.Email)
-- `role` (`User`, `Seller`, `Admin`)
+### Token behavior
 
-### 2.3 Expiration
+- JWT includes `sub`, `jti`, `email`, `nameidentifier`, and `role` claims.
+- Expiry is controlled by backend configuration (`Jwt:ExpiresInMinutes`, default 60).
+- `POST /api/auth/logout` revokes token `jti` (Redis-backed).
 
-- Token expiry is controlled by `Jwt:ExpiresInMinutes` (default 60 minutes).
-- Login/register/become-seller responses include `expiresAtUtc`.
+> **Warning:** No refresh-token endpoint currently exists. Re-authenticate when token expires.
 
-### 2.4 Revocation behavior
+### Roles and permissions
 
-- `POST /api/auth/logout` revokes the current token `jti` server-side (Redis-backed revocation).
-- A revoked token fails auth on subsequent requests.
+- `User`: basic authenticated account.
+- `Seller`: can create/update listings and images.
+- `Admin`: can update seller listing limits.
 
-### 2.5 Role policy and role checks
+### Security best practices for consumers
 
-- Policy `SellerOnly` allows roles: `Seller` or `Admin`.
-- Admin-only routes are protected via `[Authorize(Roles = "Admin")]`.
+- Always use HTTPS outside local development.
+- Never store JWT long-term in insecure storage if avoidable.
+- Clear app auth state on `401`.
+- Implement client-side request throttling and exponential backoff for transient failures.
+- Restrict frontend origin via CORS in production.
+- Use allow-listed backend domains in frontend configuration.
+
+### Platform-level security notes
+
+- CORS currently allows `http://localhost:3000`.
+- Revoked JWTs are checked on token validation.
+- Email/password flows use generic responses where needed to reduce account enumeration risk.
 
 ---
 
-## 3) CORS
+## 3) Getting Started / Quickstart
 
-Current CORS policy allows frontend origin:
+### Prerequisites
 
-- `http://localhost:3000`
+- Running API instance (`docker compose up --build` from repo root).
+- Ability to make HTTP requests (cURL/Postman/HTTP client).
+- Optional: Node.js or Python for scripted examples.
 
-with any method and any header.
+### Hello World flow (working sequence)
 
----
+This sequence registers, verifies (manual token retrieval from email/log), logs in, and fetches profile.
 
-## 4) Content type, serialization, and enum format
+#### 3.1 cURL
 
-### 4.1 JSON conventions
+```bash
+BASE_URL="http://localhost:8080"
+EMAIL="frontend.demo.$(date +%s)@example.com"
+PASSWORD="StrongPass1"
 
-- Send request body as JSON.
-- Responses are JSON.
-- Use header:
+# Register
+REGISTER_RESPONSE=$(curl -sS -X POST "$BASE_URL/api/auth/register" \
+  -H "Content-Type: application/json" \
+  -d "{\"email\":\"$EMAIL\",\"password\":\"$PASSWORD\"}")
 
-```http
-Content-Type: application/json
+echo "$REGISTER_RESPONSE"
+
+# Request verification email
+curl -sS -X POST "$BASE_URL/api/auth/request-email-verification" \
+  -H "Content-Type: application/json" \
+  -d "{\"email\":\"$EMAIL\"}" | jq
+
+# Manually read token from email/log and set:
+VERIFY_TOKEN="${VERIFY_TOKEN:?Set VERIFY_TOKEN from verification email link}"
+
+curl -sS -X POST "$BASE_URL/api/auth/verify-email" \
+  -H "Content-Type: application/json" \
+  -d "{\"token\":\"$VERIFY_TOKEN\"}" | jq
+
+# Login
+LOGIN_RESPONSE=$(curl -sS -X POST "$BASE_URL/api/auth/login" \
+  -H "Content-Type: application/json" \
+  -d "{\"email\":\"$EMAIL\",\"password\":\"$PASSWORD\"}")
+
+ACCESS_TOKEN=$(echo "$LOGIN_RESPONSE" | jq -r '.accessToken')
+
+# Me
+curl -sS "$BASE_URL/api/auth/me" \
+  -H "Authorization: Bearer $ACCESS_TOKEN" | jq
 ```
 
-### 4.2 Enum serialization
+#### 3.2 JavaScript (Node 18+)
 
-Enums are serialized and accepted as **strings** (because `JsonStringEnumConverter` is enabled).
+```js
+const BASE_URL = 'http://localhost:8080';
+const email = `frontend.demo.${Date.now()}@example.com`;
+const password = 'StrongPass1';
 
-Allowed enum values:
+async function post(path, body, token) {
+  const res = await fetch(`${BASE_URL}${path}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {})
+    },
+    body: JSON.stringify(body)
+  });
+  return { status: res.status, json: await res.json() };
+}
 
-- `UserRole`: `User`, `Seller`, `Admin`
-- `ProductCondition`: `New`, `LikeNew`, `Used`, `HeavilyUsed`, `Vintage`
-- `ReportTargetType`: `Product`, `Seller`, `Message`
+async function get(path, token) {
+  const res = await fetch(`${BASE_URL}${path}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {}
+  });
+  return { status: res.status, json: await res.json() };
+}
+
+(async () => {
+  const register = await post('/api/auth/register', { email, password });
+  console.log('register', register.status, register.json);
+
+  await post('/api/auth/request-email-verification', { email });
+  console.log('Requested verification email; now verify manually from email/log token.');
+
+  // const verify = await post('/api/auth/verify-email', { token: process.env.VERIFY_TOKEN });
+  // console.log('verify', verify.status, verify.json);
+
+  const login = await post('/api/auth/login', { email, password });
+  console.log('login', login.status, login.json);
+
+  const me = await get('/api/auth/me', login.json.accessToken);
+  console.log('me', me.status, me.json);
+})();
+```
+
+#### 3.3 Python (requests)
+
+```python
+import os
+import time
+import requests
+
+BASE_URL = "http://localhost:8080"
+email = f"frontend.demo.{int(time.time())}@example.com"
+password = "StrongPass1"
+
+register = requests.post(f"{BASE_URL}/api/auth/register", json={"email": email, "password": password})
+print("register", register.status_code, register.json())
+
+requests.post(f"{BASE_URL}/api/auth/request-email-verification", json={"email": email})
+print("verification requested; verify email manually with token from email/log")
+
+# verify = requests.post(f"{BASE_URL}/api/auth/verify-email", json={"token": os.environ["VERIFY_TOKEN"]})
+# print("verify", verify.status_code, verify.json())
+
+login = requests.post(f"{BASE_URL}/api/auth/login", json={"email": email, "password": password})
+print("login", login.status_code, login.json())
+
+token = login.json()["accessToken"]
+me = requests.get(f"{BASE_URL}/api/auth/me", headers={"Authorization": f"Bearer {token}"})
+print("me", me.status_code, me.json())
+```
 
 ---
 
-## 5) Standard error response contract
+## 4) Core Concepts & Glossary
 
-Errors are returned as RFC7807-like `ProblemDetails` JSON from global exception middleware.
+### Core terms
 
-### 5.1 Error payload shape
+- **User:** any registered account.
+- **Seller:** user allowed to publish listings.
+- **Admin:** elevated role with seller-management abilities.
+- **Product:** listing created by seller.
+- **ChatRoom:** conversation bound to a `(productId, buyerId, sellerId)` tuple.
+- **Message:** chat entry in a room.
+- **Report:** moderation signal against a product/seller/message.
+
+### Object relationship summary
+
+- `User (Seller)` 1..N `Product`
+- `Product` 1..N `ProductImage`
+- `Product + Buyer + Seller` -> unique-ish `ChatRoom` behavior (returns existing room)
+- `ChatRoom` 1..N `Message`
+- `User` 1..N `Report`
+
+### Idempotency conventions
+
+- `DELETE /api/products/images/{imageId}` is idempotent: returns `204` even if already removed.
+- `POST /api/chats` behaves quasi-idempotent for same product/buyer/seller triple by returning existing room.
+
+### Pagination conventions
+
+- Query: `pageNumber` (default `1`), `pageSize` (default `20`, max `100`)
+- Response: `items`, `pageNumber`, `pageSize`, `totalCount`, `totalPages`
+
+### Filtering and sorting conventions
+
+- Filtering examples currently exposed:
+  - products by active state (`/api/products/active`)
+  - products by seller
+  - reports by target
+- Explicit client-provided sorting parameters are not currently exposed.
+
+---
+
+## 5) Endpoints / API Reference
+
+> **Format per endpoint:** method/path, purpose, auth, parameters, examples (cURL + JavaScript), response schema, success/error samples, status codes.
+
+### Shared response schemas
+
+#### AuthResponseDto
+
+```json
+{
+  "userId": "b7a6b87a-8f53-4ac7-bda6-a2c6ebf07f96",
+  "email": "user@example.com",
+  "role": "User",
+  "accessToken": "<jwt>",
+  "expiresAtUtc": "2026-02-18T15:00:00Z"
+}
+```
+
+#### PagedResult<T>
+
+```json
+{
+  "items": [],
+  "pageNumber": 1,
+  "pageSize": 20,
+  "totalCount": 0,
+  "totalPages": 0
+}
+```
+
+---
+
+## 5.1 Auth (`/api/auth`)
+
+### 1) POST `/api/auth/register`
+
+Creates a new user account.
+
+- **Auth:** none
+- **Headers:** `Content-Type: application/json`
+- **Body:**
+  - `email` (string, required, valid email, max 320)
+  - `password` (string, required, min 8, uppercase+lowercase+number)
+
+**cURL**
+```bash
+curl -sS -X POST "http://localhost:8080/api/auth/register" \
+  -H "Content-Type: application/json" \
+  -d '{"email":"alice.register@example.com","password":"StrongPass1"}'
+```
+
+**JavaScript**
+```js
+await fetch('http://localhost:8080/api/auth/register', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ email: 'alice.register@example.com', password: 'StrongPass1' })
+});
+```
+
+**Success (`200`)**
+```json
+{
+  "userId": "5ef5cb3d-e1e8-4d9d-95f1-6d5f2fca1a60",
+  "email": "alice.register@example.com",
+  "role": "User",
+  "accessToken": "<jwt>",
+  "expiresAtUtc": "2026-02-18T15:00:00Z"
+}
+```
+
+**Error example (`409 email_already_exists`)**
+```json
+{
+  "title": "Conflict",
+  "status": 409,
+  "detail": "An account with this email already exists.",
+  "errorCode": "email_already_exists"
+}
+```
+
+**Status codes:** `200`, `400`, `409`.
+
+---
+
+### 2) POST `/api/auth/login`
+
+Authenticates a verified user.
+
+- **Auth:** none
+- **Body:** `email`, `password`
+
+**cURL**
+```bash
+curl -sS -X POST "http://localhost:8080/api/auth/login" \
+  -H "Content-Type: application/json" \
+  -d '{"email":"alice.register@example.com","password":"StrongPass1"}'
+```
+
+**JavaScript**
+```js
+await fetch('http://localhost:8080/api/auth/login', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ email: 'alice.register@example.com', password: 'StrongPass1' })
+});
+```
+
+**Success (`200`)**: `AuthResponseDto`
+
+**Error examples**
+
+`401 invalid_credentials`
+```json
+{
+  "title": "Unauthorized",
+  "status": 401,
+  "detail": "Invalid email or password.",
+  "errorCode": "invalid_credentials"
+}
+```
+
+`401 email_not_verified`
+```json
+{
+  "title": "Unauthorized",
+  "status": 401,
+  "detail": "Please verify your email before logging in.",
+  "errorCode": "email_not_verified"
+}
+```
+
+**Status codes:** `200`, `400`, `401`.
+
+---
+
+### 3) POST `/api/auth/logout`
+
+Revokes current JWT (`jti`) and clears auth cookies.
+
+- **Auth:** required
+- **Headers:** `Authorization: Bearer <token>`
+
+**cURL**
+```bash
+curl -sS -X POST "http://localhost:8080/api/auth/logout" \
+  -H "Authorization: Bearer $ACCESS_TOKEN"
+```
+
+**JavaScript**
+```js
+await fetch('http://localhost:8080/api/auth/logout', {
+  method: 'POST',
+  headers: { Authorization: `Bearer ${accessToken}` }
+});
+```
+
+**Success (`200`)**
+```json
+{ "message": "Logged out successfully." }
+```
+
+**Status codes:** `200`, `401`.
+
+---
+
+### 4) POST `/api/auth/request-email-verification`
+
+Requests verification email (generic response for enumeration safety).
+
+- **Auth:** none
+- **Body:** `email`
+
+**cURL**
+```bash
+curl -sS -X POST "http://localhost:8080/api/auth/request-email-verification" \
+  -H "Content-Type: application/json" \
+  -d '{"email":"alice.register@example.com"}'
+```
+
+**JavaScript**
+```js
+await fetch('http://localhost:8080/api/auth/request-email-verification', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ email: 'alice.register@example.com' })
+});
+```
+
+**Success (`200`)**
+```json
+{ "message": "If the account exists and is unverified, a verification email has been sent." }
+```
+
+**Status codes:** `200`, `400`.
+
+---
+
+### 5) POST `/api/auth/verify-email`
+
+Verifies account with emailed token.
+
+- **Auth:** none
+- **Body:** `token` (string, required, max 512)
+
+**cURL**
+```bash
+curl -sS -X POST "http://localhost:8080/api/auth/verify-email" \
+  -H "Content-Type: application/json" \
+  -d '{"token":"${VERIFY_TOKEN}"}'
+```
+
+**JavaScript**
+```js
+const verifyToken = process.env.VERIFY_TOKEN;
+await fetch('http://localhost:8080/api/auth/verify-email', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ token: verifyToken })
+});
+```
+
+**Success (`200`)**
+```json
+{ "message": "Email verified successfully." }
+```
+
+**Error (`400 invalid_email_verification_token`)**
+```json
+{
+  "title": "Bad Request",
+  "status": 400,
+  "detail": "The token is invalid or expired.",
+  "errorCode": "invalid_email_verification_token"
+}
+```
+
+**Status codes:** `200`, `400`.
+
+---
+
+### 6) POST `/api/auth/forgot-password`
+
+Starts reset flow with generic response.
+
+- **Auth:** none
+- **Body:** `email`
+
+**cURL**
+```bash
+curl -sS -X POST "http://localhost:8080/api/auth/forgot-password" \
+  -H "Content-Type: application/json" \
+  -d '{"email":"alice.register@example.com"}'
+```
+
+**JavaScript**
+```js
+await fetch('http://localhost:8080/api/auth/forgot-password', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ email: 'alice.register@example.com' })
+});
+```
+
+**Success (`200`)**
+```json
+{ "message": "If an account exists, a reset link has been sent." }
+```
+
+**Status codes:** `200`, `400`.
+
+---
+
+### 7) POST `/api/auth/reset-password`
+
+Completes password reset with token.
+
+- **Auth:** none
+- **Body:**
+  - `token` (required)
+  - `newPassword` (required, min 8, uppercase+lowercase+number)
+
+**cURL**
+```bash
+curl -sS -X POST "http://localhost:8080/api/auth/reset-password" \
+  -H "Content-Type: application/json" \
+  -d '{"token":"'"$RESET_TOKEN"'","newPassword":"NewStrong1"}'
+```
+
+**JavaScript**
+```js
+const resetToken = process.env.RESET_TOKEN;
+await fetch('http://localhost:8080/api/auth/reset-password', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ token: resetToken, newPassword: 'NewStrong1' })
+});
+```
+
+**Success (`200`)**
+```json
+{ "message": "Password reset successfully." }
+```
+
+**Error (`400 invalid_reset_token`)**
+```json
+{
+  "title": "Bad Request",
+  "status": 400,
+  "detail": "The reset token is invalid or expired.",
+  "errorCode": "invalid_reset_token"
+}
+```
+
+**Status codes:** `200`, `400`.
+
+---
+
+### 8) POST `/api/auth/become-seller`
+
+Upgrades current authenticated `User` role to `Seller` and returns fresh JWT.
+
+- **Auth:** required
+
+**cURL**
+```bash
+curl -sS -X POST "http://localhost:8080/api/auth/become-seller" \
+  -H "Authorization: Bearer $ACCESS_TOKEN"
+```
+
+**JavaScript**
+```js
+await fetch('http://localhost:8080/api/auth/become-seller', {
+  method: 'POST',
+  headers: { Authorization: `Bearer ${accessToken}` }
+});
+```
+
+**Success (`200`)**: `AuthResponseDto`
+
+**Status codes:** `200`, `401`, `404`.
+
+---
+
+### 9) GET `/api/auth/me`
+
+Returns current user profile.
+
+- **Auth:** required
+
+**cURL**
+```bash
+curl -sS "http://localhost:8080/api/auth/me" \
+  -H "Authorization: Bearer $ACCESS_TOKEN"
+```
+
+**JavaScript**
+```js
+await fetch('http://localhost:8080/api/auth/me', {
+  headers: { Authorization: `Bearer ${accessToken}` }
+});
+```
+
+**Success (`200`)**
+```json
+{
+  "id": "5ef5cb3d-e1e8-4d9d-95f1-6d5f2fca1a60",
+  "email": "alice.register@example.com",
+  "role": "Seller",
+  "emailVerified": true,
+  "sellerRating": 0,
+  "listingLimit": 10,
+  "createdAt": "2026-02-18T13:00:00Z"
+}
+```
+
+**Status codes:** `200`, `401`, `404`.
+
+---
+
+## 5.2 Products (`/api/products`)
+
+### 10) POST `/api/products`
+
+Creates a product (seller/admin only).
+
+- **Auth:** required (`Seller` or `Admin`)
+- **Body:**
+  - `sellerUserId` (guid, required)
+  - `title` (string, required, <=200)
+  - `description` (string, required, <=2000)
+  - `priceText` (string, optional, <=100)
+  - `condition` (`New|LikeNew|Used|HeavilyUsed|Vintage`)
+  - `imageUrls` (string[], optional, each <=500)
+
+**cURL**
+```bash
+curl -sS -X POST "http://localhost:8080/api/products" \
+  -H "Authorization: Bearer $ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "sellerUserId":"5ef5cb3d-e1e8-4d9d-95f1-6d5f2fca1a60",
+    "title":"iPhone 14",
+    "description":"Used, excellent condition",
+    "priceText":"$550",
+    "condition":"Used",
+    "imageUrls":["https://picsum.photos/seed/iphone14a/800/600"]
+  }'
+```
+
+**JavaScript**
+```js
+await fetch('http://localhost:8080/api/products', {
+  method: 'POST',
+  headers: {
+    Authorization: `Bearer ${accessToken}`,
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    sellerUserId: '5ef5cb3d-e1e8-4d9d-95f1-6d5f2fca1a60',
+    title: 'iPhone 14',
+    description: 'Used, excellent condition',
+    priceText: '$550',
+    condition: 'Used',
+    imageUrls: ['https://picsum.photos/seed/iphone14a/800/600']
+  })
+});
+```
+
+**Success (`201`)**: `ProductDto`
+
+**Error (`409 listing_limit_reached`)**
+```json
+{
+  "title": "Conflict",
+  "status": 409,
+  "detail": "Seller reached active listing limit (10).",
+  "errorCode": "listing_limit_reached"
+}
+```
+
+**Status codes:** `201`, `400`, `401`, `403`, `404`, `409`.
+
+---
+
+### 11) GET `/api/products/{productId}`
+
+Returns one product.
+
+- **Auth:** none
+- **Path:** `productId` (guid, required)
+
+**cURL**
+```bash
+curl -sS "http://localhost:8080/api/products/11111111-1111-1111-1111-111111111111"
+```
+
+**JavaScript**
+```js
+await fetch('http://localhost:8080/api/products/11111111-1111-1111-1111-111111111111');
+```
+
+**Success (`200`)**: `ProductDto`
+
+**Error (`404 product_not_found`)**
+```json
+{
+  "title": "Not Found",
+  "status": 404,
+  "detail": "No product found with id 11111111-1111-1111-1111-111111111111.",
+  "errorCode": "product_not_found"
+}
+```
+
+**Status codes:** `200`, `404`.
+
+---
+
+### 12) GET `/api/products/active`
+
+Returns paged active products.
+
+- **Auth:** none
+- **Query:** `pageNumber` (int >=1), `pageSize` (1..100)
+
+**cURL**
+```bash
+curl -sS "http://localhost:8080/api/products/active?pageNumber=1&pageSize=20"
+```
+
+**JavaScript**
+```js
+await fetch('http://localhost:8080/api/products/active?pageNumber=1&pageSize=20');
+```
+
+**Success (`200`)**: `PagedResult<ProductDto>`
+
+**Status codes:** `200`, `400`.
+
+---
+
+### 13) GET `/api/products/by-seller/{sellerUserId}`
+
+Returns paged products for one seller.
+
+- **Auth:** currently public
+- **Path:** `sellerUserId` (guid)
+- **Query:** pagination
+
+**cURL**
+```bash
+curl -sS "http://localhost:8080/api/products/by-seller/5ef5cb3d-e1e8-4d9d-95f1-6d5f2fca1a60?pageNumber=1&pageSize=20"
+```
+
+**JavaScript**
+```js
+await fetch('http://localhost:8080/api/products/by-seller/5ef5cb3d-e1e8-4d9d-95f1-6d5f2fca1a60?pageNumber=1&pageSize=20');
+```
+
+**Success (`200`)**: `PagedResult<ProductDto>`
+
+**Status codes:** `200`, `400`.
+
+---
+
+### 14) PUT `/api/products/{productId}`
+
+Updates product metadata and active state.
+
+- **Auth:** required (`Seller` or `Admin`)
+- **Path:** `productId` (guid)
+- **Body:** `title`, `description`, `priceText`, `condition`, `isActive`
+
+**cURL**
+```bash
+curl -sS -X PUT "http://localhost:8080/api/products/11111111-1111-1111-1111-111111111111" \
+  -H "Authorization: Bearer $ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title":"iPhone 14 - price drop",
+    "description":"Used, excellent condition, includes case",
+    "priceText":"$520",
+    "condition":"Used",
+    "isActive":true
+  }'
+```
+
+**JavaScript**
+```js
+await fetch('http://localhost:8080/api/products/11111111-1111-1111-1111-111111111111', {
+  method: 'PUT',
+  headers: {
+    Authorization: `Bearer ${accessToken}`,
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    title: 'iPhone 14 - price drop',
+    description: 'Used, excellent condition, includes case',
+    priceText: '$520',
+    condition: 'Used',
+    isActive: true
+  })
+});
+```
+
+**Success (`200`)**: `ProductDto`
+
+**Status codes:** `200`, `400`, `401`, `403`, `404`, `409`.
+
+---
+
+### 15) POST `/api/products/{productId}/images`
+
+Adds product image.
+
+- **Auth:** required (`Seller` or `Admin`)
+- **Path:** `productId` (guid)
+- **Body:**
+  - `imageUrl` (required, <=500)
+  - `order` (int, >=0)
+
+**cURL**
+```bash
+curl -sS -X POST "http://localhost:8080/api/products/11111111-1111-1111-1111-111111111111/images" \
+  -H "Authorization: Bearer $ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"imageUrl":"https://picsum.photos/seed/iphone14b/800/600","order":1}'
+```
+
+**JavaScript**
+```js
+await fetch('http://localhost:8080/api/products/11111111-1111-1111-1111-111111111111/images', {
+  method: 'POST',
+  headers: {
+    Authorization: `Bearer ${accessToken}`,
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({ imageUrl: 'https://picsum.photos/seed/iphone14b/800/600', order: 1 })
+});
+```
+
+**Success (`200`)**
+```json
+{
+  "id": "d69b55c6-d805-4ec5-95d6-3a72f2a94f72",
+  "productId": "11111111-1111-1111-1111-111111111111",
+  "imageUrl": "https://picsum.photos/seed/iphone14b/800/600",
+  "order": 1
+}
+```
+
+**Status codes:** `200`, `400`, `401`, `403`, `404`.
+
+---
+
+### 16) DELETE `/api/products/images/{imageId}`
+
+Removes product image.
+
+- **Auth:** required (`Seller` or `Admin`)
+- **Path:** `imageId` (guid)
+
+**cURL**
+```bash
+curl -i -X DELETE "http://localhost:8080/api/products/images/d69b55c6-d805-4ec5-95d6-3a72f2a94f72" \
+  -H "Authorization: Bearer $ACCESS_TOKEN"
+```
+
+**JavaScript**
+```js
+await fetch('http://localhost:8080/api/products/images/d69b55c6-d805-4ec5-95d6-3a72f2a94f72', {
+  method: 'DELETE',
+  headers: { Authorization: `Bearer ${accessToken}` }
+});
+```
+
+**Success (`204`)** no body.
+
+> **Note:** This endpoint is idempotent and still returns `204` if image does not exist.
+
+**Status codes:** `204`, `401`, `403`.
+
+---
+
+## 5.3 Chats (`/api/chats`)
+
+> **Warning:** Controller currently has no `[Authorize]`. Protect through gateway or backend update before production.
+
+### 17) POST `/api/chats`
+
+Starts chat room or returns existing room for same product/buyer/seller.
+
+- **Auth:** currently public
+- **Body:** `productId`, `buyerId`, `sellerId` (all guid required)
+
+**cURL**
+```bash
+curl -sS -X POST "http://localhost:8080/api/chats" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "productId":"11111111-1111-1111-1111-111111111111",
+    "buyerId":"22222222-2222-2222-2222-222222222222",
+    "sellerId":"5ef5cb3d-e1e8-4d9d-95f1-6d5f2fca1a60"
+  }'
+```
+
+**JavaScript**
+```js
+await fetch('http://localhost:8080/api/chats', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    productId: '11111111-1111-1111-1111-111111111111',
+    buyerId: '22222222-2222-2222-2222-222222222222',
+    sellerId: '5ef5cb3d-e1e8-4d9d-95f1-6d5f2fca1a60'
+  })
+});
+```
+
+**Success (`201`)**: `ChatRoomDto`
+
+**Status codes:** `201`, `400`.
+
+---
+
+### 18) GET `/api/chats/{chatRoomId}`
+
+Returns chat room by id.
+
+- **Auth:** currently public
+- **Path:** `chatRoomId` (guid)
+
+**cURL**
+```bash
+curl -sS "http://localhost:8080/api/chats/33333333-3333-3333-3333-333333333333"
+```
+
+**JavaScript**
+```js
+await fetch('http://localhost:8080/api/chats/33333333-3333-3333-3333-333333333333');
+```
+
+**Success (`200`)**: `ChatRoomDto`
+
+**Error (`404 chat_room_not_found`)**
+```json
+{
+  "title": "Not Found",
+  "status": 404,
+  "detail": "No chat room found with id 33333333-3333-3333-3333-333333333333.",
+  "errorCode": "chat_room_not_found"
+}
+```
+
+**Status codes:** `200`, `404`.
+
+---
+
+### 19) GET `/api/chats/by-user/{userId}`
+
+Returns paged chat rooms where user is participant.
+
+- **Auth:** currently public
+- **Path:** `userId` (guid)
+- **Query:** pagination
+
+**cURL**
+```bash
+curl -sS "http://localhost:8080/api/chats/by-user/22222222-2222-2222-2222-222222222222?pageNumber=1&pageSize=20"
+```
+
+**JavaScript**
+```js
+await fetch('http://localhost:8080/api/chats/by-user/22222222-2222-2222-2222-222222222222?pageNumber=1&pageSize=20');
+```
+
+**Success (`200`)**: `PagedResult<ChatRoomDto>`
+
+**Status codes:** `200`, `400`.
+
+---
+
+### 20) POST `/api/chats/{chatRoomId}/messages`
+
+Sends a message to chat room.
+
+- **Auth:** currently public
+- **Path:** `chatRoomId` (guid)
+- **Body:**
+  - `senderId` (guid, required)
+  - `content` (string, required, <=2000)
+
+**cURL**
+```bash
+curl -sS -X POST "http://localhost:8080/api/chats/33333333-3333-3333-3333-333333333333/messages" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "senderId":"22222222-2222-2222-2222-222222222222",
+    "content":"Hi, is this product still available?"
+  }'
+```
+
+**JavaScript**
+```js
+await fetch('http://localhost:8080/api/chats/33333333-3333-3333-3333-333333333333/messages', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    senderId: '22222222-2222-2222-2222-222222222222',
+    content: 'Hi, is this product still available?'
+  })
+});
+```
+
+**Success (`200`)**: `MessageDto`
+
+**Status codes:** `200`, `400`, `404`.
+
+---
+
+### 21) GET `/api/chats/{chatRoomId}/messages`
+
+Returns paged messages for chat room.
+
+- **Auth:** currently public
+- **Path:** `chatRoomId` (guid)
+- **Query:** pagination
+
+**cURL**
+```bash
+curl -sS "http://localhost:8080/api/chats/33333333-3333-3333-3333-333333333333/messages?pageNumber=1&pageSize=20"
+```
+
+**JavaScript**
+```js
+await fetch('http://localhost:8080/api/chats/33333333-3333-3333-3333-333333333333/messages?pageNumber=1&pageSize=20');
+```
+
+**Success (`200`)**: `PagedResult<MessageDto>`
+
+**Status codes:** `200`, `400`.
+
+---
+
+## 5.4 Reports (`/api/reports`)
+
+> **Warning:** Controller currently has no `[Authorize]`. Add server-side auth if required by policy.
+
+### 22) POST `/api/reports`
+
+Creates moderation report.
+
+- **Auth:** currently public
+- **Body:**
+  - `reporterId` (guid, required)
+  - `targetType` (`Product|Seller|Message`, required)
+  - `targetId` (guid, required)
+  - `reason` (string, required, <=1000)
+
+**cURL**
+```bash
+curl -sS -X POST "http://localhost:8080/api/reports" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "reporterId":"22222222-2222-2222-2222-222222222222",
+    "targetType":"Product",
+    "targetId":"11111111-1111-1111-1111-111111111111",
+    "reason":"Suspicious listing details"
+  }'
+```
+
+**JavaScript**
+```js
+await fetch('http://localhost:8080/api/reports', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    reporterId: '22222222-2222-2222-2222-222222222222',
+    targetType: 'Product',
+    targetId: '11111111-1111-1111-1111-111111111111',
+    reason: 'Suspicious listing details'
+  })
+});
+```
+
+**Success (`200`)**: `ReportDto`
+
+**Status codes:** `200`, `400`.
+
+---
+
+### 23) GET `/api/reports/by-target`
+
+Returns paged reports for a target entity.
+
+- **Auth:** currently public
+- **Query:**
+  - `targetType` (enum, required)
+  - `targetId` (guid, required)
+  - pagination query
+
+**cURL**
+```bash
+curl -sS "http://localhost:8080/api/reports/by-target?targetType=Product&targetId=11111111-1111-1111-1111-111111111111&pageNumber=1&pageSize=20"
+```
+
+**JavaScript**
+```js
+await fetch('http://localhost:8080/api/reports/by-target?targetType=Product&targetId=11111111-1111-1111-1111-111111111111&pageNumber=1&pageSize=20');
+```
+
+**Success (`200`)**: `PagedResult<ReportDto>`
+
+**Status codes:** `200`, `400`.
+
+---
+
+### 24) GET `/api/reports/by-reporter/{reporterId}`
+
+Returns paged reports by reporter id.
+
+- **Auth:** currently public
+- **Path:** `reporterId` (guid)
+- **Query:** pagination
+
+**cURL**
+```bash
+curl -sS "http://localhost:8080/api/reports/by-reporter/22222222-2222-2222-2222-222222222222?pageNumber=1&pageSize=20"
+```
+
+**JavaScript**
+```js
+await fetch('http://localhost:8080/api/reports/by-reporter/22222222-2222-2222-2222-222222222222?pageNumber=1&pageSize=20');
+```
+
+**Success (`200`)**: `PagedResult<ReportDto>`
+
+**Status codes:** `200`, `400`.
+
+---
+
+## 5.5 Admin Sellers (`/api/admin/sellers`)
+
+### 25) PATCH `/api/admin/sellers/{sellerUserId}/listing-limit`
+
+Updates seller listing limit.
+
+- **Auth:** required role `Admin`
+- **Path:** `sellerUserId` (guid)
+- **Body:** `listingLimit` (int, required, >=0)
+
+**cURL**
+```bash
+curl -sS -X PATCH "http://localhost:8080/api/admin/sellers/5ef5cb3d-e1e8-4d9d-95f1-6d5f2fca1a60/listing-limit" \
+  -H "Authorization: Bearer $ADMIN_ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"listingLimit":25}'
+```
+
+**JavaScript**
+```js
+await fetch('http://localhost:8080/api/admin/sellers/5ef5cb3d-e1e8-4d9d-95f1-6d5f2fca1a60/listing-limit', {
+  method: 'PATCH',
+  headers: {
+    Authorization: `Bearer ${adminAccessToken}`,
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({ listingLimit: 25 })
+});
+```
+
+**Success (`200`)**: `UserDto`
+
+**Error (`400 user_not_seller`)**
+```json
+{
+  "title": "Bad Request",
+  "status": 400,
+  "detail": "The specified user is not a seller.",
+  "errorCode": "user_not_seller"
+}
+```
+
+**Status codes:** `200`, `400`, `401`, `403`, `404`.
+
+---
+
+## 6) Error Handling
+
+All failures are returned as `ProblemDetails`-style JSON.
+
+### Canonical error shape
 
 ```json
 {
@@ -105,610 +1234,234 @@ Errors are returned as RFC7807-like `ProblemDetails` JSON from global exception 
   "timestampUtc": "2026-02-18T14:21:22.1234567Z",
   "errorCode": "validation_failed",
   "errors": {
-    "Email": ["'Email' is not a valid email address."],
-    "Password": ["Password must contain at least one uppercase letter."]
+    "Email": ["'Email' is not a valid email address."]
   }
 }
 ```
 
-### 5.2 Common status codes
+### Error reference table
 
-- `200` success
-- `201` created
-- `204` no content
-- `400` bad request / validation / malformed JSON
-- `401` unauthorized
-- `403` forbidden
-- `404` not found
-- `409` conflict
-- `499` request canceled by client
-- `500` server error
+| errorCode | HTTP | Meaning | Suggested fix |
+|---|---:|---|---|
+| `validation_failed` | 400 | DTO/FluentValidation rules failed | Correct field values using `errors` map |
+| `invalid_json` | 400 | Malformed JSON payload | Validate JSON before send |
+| `invalid_credentials` | 401 | Email/password invalid | Re-check credentials |
+| `email_not_verified` | 401 | Email not verified | Complete verify-email workflow |
+| `invalid_user_token` | 401 | Missing/invalid user claim in JWT | Re-login and send valid bearer token |
+| `token_metadata_missing` | 401 | Missing token claims (logout path) | Use a valid JWT generated by this API |
+| `user_not_found` | 404 | User does not exist | Refresh local user state, handle deleted users |
+| `seller_not_found` | 404 | Seller not found | Use an existing seller id |
+| `product_not_found` | 404 | Product missing | Verify product id |
+| `chat_room_not_found` | 404 | Chat room missing | Verify room id |
+| `listing_limit_reached` | 409 | Seller exceeded active listing capacity | Increase listing limit or deactivate another listing |
+| `invalid_email_verification_token` | 400 | Verification token invalid/expired | Request new verification token |
+| `invalid_reset_token` | 400 | Reset token invalid/expired | Request password reset again |
+| `user_not_seller` | 400 | Admin tried to set limit for non-seller | Promote user to seller first |
+| `invalid_pagination_parameters` | 400 | pageNumber/pageSize out of range | Use pageNumber>=1 and 1<=pageSize<=100 |
 
-### 5.3 Common error codes used by business logic
+### Common failure scenarios
 
-- `validation_failed`
-- `invalid_json`
-- `invalid_credentials`
-- `email_not_verified`
-- `token_metadata_missing`
-- `invalid_user_token`
-- `user_not_found`
-- `seller_not_found`
-- `listing_limit_reached`
-- `product_not_found`
-- `chat_room_not_found`
-- `invalid_email_verification_token`
-- `invalid_reset_token`
-- `user_not_seller`
-- `invalid_pagination_parameters`
+1. **401 after logout with same token**: expected due to revocation.
+2. **409 on product create**: seller hit listing cap.
+3. **400 on enum fields**: must send enum **string values** exactly.
+4. **400 validation**: parse and display `errors` object per field.
 
----
+### Retry guidance
 
-## 6) Pagination contract
-
-Endpoints that return `PagedResult<T>` accept query parameters:
-
-- `pageNumber` (default `1`, must be `>= 1`)
-- `pageSize` (default `20`, allowed range `1..100`)
-
-Response shape:
-
-```json
-{
-  "items": [],
-  "pageNumber": 1,
-  "pageSize": 20,
-  "totalCount": 0,
-  "totalPages": 0
-}
-```
-
-If invalid pagination values are sent, API returns `400` with `errorCode: "invalid_pagination_parameters"`.
+- **Do retry** for transient `500`/network timeouts using exponential backoff.
+- **Do not retry unchanged** for `400/401/403/404/409` until request data/auth state is fixed.
+- Recommended backoff: 0.5s, 1s, 2s, 4s (max 4 tries).
 
 ---
 
-## 7) Data models (request + response)
+## 7) Rate Limits & Quotas
 
-> Use these models exactly in your frontend API client typing.
+Current backend implementation does **not** expose explicit per-plan rate limits or rate-limit headers.
 
-### 7.1 AuthResponseDto
+> **Warning:** Until server-side rate limiting is added, clients should implement local throttling to prevent accidental bursts.
+
+Suggested client behavior:
+
+- Cap concurrent writes (e.g., max 3 at once).
+- Debounce rapid user actions (search/filter typing, repeated submits).
+- Add retry/backoff only for transient errors.
+
+If/when rate limits are added, expect common headers such as:
+
+- `X-RateLimit-Limit`
+- `X-RateLimit-Remaining`
+- `X-RateLimit-Reset`
+
+and HTTP `429 Too Many Requests` when exceeded.
+
+---
+
+## 8) Webhooks & Events
+
+There are currently **no webhook endpoints/events** in this API.
+
+- No registration API for webhook URLs.
+- No signed delivery mechanism.
+- No delivery retry/dead-letter behavior.
+
+> **Note:** If webhooks are introduced, publish signature verification docs and replay protection guidance.
+
+---
+
+## 9) SDKs & Libraries
+
+### Official SDKs
+
+No official SDK package is currently published.
+
+### Recommended client libraries
+
+- **JavaScript/TypeScript:** native `fetch`, Axios
+- **Python:** `requests`
+- **C#/.NET:** `HttpClient`
+
+### Community libraries
+
+No curated community SDK list is maintained yet.
+
+---
+
+## 10) Changelog & Versioning
+
+### Versioning state
+
+- Current API exposes non-versioned paths (`/api/...`).
+- No formal semantic API version number is embedded in routes.
+
+### Deprecation policy (recommended)
+
+Because routes are not versioned yet, adopt:
+
+1. announce deprecation in docs,
+2. keep old behavior for at least one release window,
+3. include migration examples,
+4. remove only after communicated cutoff date.
+
+### Breaking vs non-breaking examples
+
+- **Breaking:** removing field, renaming enum value, changing status code.
+- **Non-breaking:** adding optional response fields, adding new endpoints.
+
+### Recent documentation changes
+
+- Added comprehensive frontend integration guide with endpoint examples and operational guidance.
+
+---
+
+## 11) FAQs & Troubleshooting
+
+1. **Why do I get `email_not_verified` on login?**  
+   Verify email first using verification token flow.
+
+2. **Why does `/logout` succeed but old token fails later?**  
+   That is expected: token `jti` is revoked.
+
+3. **Why does product creation return `listing_limit_reached`?**  
+   Seller hit active listing cap. Reduce active listings or raise cap via admin endpoint.
+
+4. **Why do enum requests fail?**  
+   Send enum names as strings exactly (`Used`, not `used` or numeric).
+
+5. **Why does delete image return `204` even for missing ID?**  
+   Endpoint is intentionally idempotent.
+
+6. **Why can I call chat/report without auth?**  
+   Current controllers do not enforce `[Authorize]`; secure upstream or update backend.
+
+7. **Why no refresh token endpoint?**  
+   Not currently implemented; user re-authenticates when access token expires.
+
+8. **How do I debug validation quickly?**  
+   Read `errorCode=validation_failed` and show field messages from `errors` map.
+
+9. **What should I do on `401` globally?**  
+   Clear local session and redirect to login.
+
+10. **How do I contact support/status page?**  
+   No dedicated support/status URLs are currently defined in repository docs.
+
+---
+
+## Appendix A: Full DTO contracts (TypeScript)
 
 ```ts
-interface AuthResponseDto {
-  userId: string;        // guid
+export type UserRole = 'User' | 'Seller' | 'Admin';
+export type ProductCondition = 'New' | 'LikeNew' | 'Used' | 'HeavilyUsed' | 'Vintage';
+export type ReportTargetType = 'Product' | 'Seller' | 'Message';
+
+export interface AuthResponseDto {
+  userId: string;
   email: string;
-  role: 'User' | 'Seller' | 'Admin';
+  role: UserRole;
   accessToken: string;
-  expiresAtUtc: string;  // ISO datetime
+  expiresAtUtc: string;
 }
-```
 
-### 7.2 UserDto
-
-```ts
-interface UserDto {
-  id: string;            // guid
+export interface UserDto {
+  id: string;
   email: string;
-  role: 'User' | 'Seller' | 'Admin';
+  role: UserRole;
   emailVerified: boolean;
-  sellerRating: number;  // decimal
+  sellerRating: number;
   listingLimit: number;
-  createdAt: string;     // ISO datetime
+  createdAt: string;
 }
-```
 
-### 7.3 ProductImageDto
-
-```ts
-interface ProductImageDto {
-  id: string;            // guid
-  productId: string;     // guid
+export interface ProductImageDto {
+  id: string;
+  productId: string;
   imageUrl: string;
   order: number;
 }
-```
 
-### 7.4 ProductDto
-
-```ts
-interface ProductDto {
-  id: string;            // guid
-  sellerUserId: string;  // guid
+export interface ProductDto {
+  id: string;
+  sellerUserId: string;
   title: string;
   description: string;
-  priceText?: string | null;
-  condition: 'New' | 'LikeNew' | 'Used' | 'HeavilyUsed' | 'Vintage';
+  priceText: string | null;
+  condition: ProductCondition;
   isActive: boolean;
-  createdAt: string;     // ISO datetime
+  createdAt: string;
   images: ProductImageDto[];
 }
-```
 
-### 7.5 ChatRoomDto
-
-```ts
-interface ChatRoomDto {
-  id: string;            // guid
-  productId: string;     // guid
-  buyerId: string;       // guid
-  sellerId: string;      // guid
-  createdAt: string;     // ISO datetime
+export interface ChatRoomDto {
+  id: string;
+  productId: string;
+  buyerId: string;
+  sellerId: string;
+  createdAt: string;
 }
-```
 
-### 7.6 MessageDto
-
-```ts
-interface MessageDto {
-  id: string;            // guid
-  chatRoomId: string;    // guid
-  senderId: string;      // guid
+export interface MessageDto {
+  id: string;
+  chatRoomId: string;
+  senderId: string;
   content: string;
-  sentAt: string;        // ISO datetime
-  createdAt: string;     // ISO datetime
+  sentAt: string;
+  createdAt: string;
 }
-```
 
-### 7.7 ReportDto
-
-```ts
-interface ReportDto {
-  id: string;            // guid
-  reporterId: string;    // guid
-  targetType: 'Product' | 'Seller' | 'Message';
-  targetId: string;      // guid
+export interface ReportDto {
+  id: string;
+  reporterId: string;
+  targetType: ReportTargetType;
+  targetId: string;
   reason: string;
-  createdAt: string;     // ISO datetime
+  createdAt: string;
+}
+
+export interface PagedResult<T> {
+  items: T[];
+  pageNumber: number;
+  pageSize: number;
+  totalCount: number;
+  totalPages: number;
 }
 ```
-
----
-
-## 8) Validation rules for request DTOs
-
-### 8.1 RegisterUserRequest
-
-```json
-{ "email": "user@example.com", "password": "StrongPass1" }
-```
-
-Rules:
-- `email`: required, valid email format, max length 320
-- `password`: required, min length 8, must contain uppercase, lowercase, and number
-
-### 8.2 LoginRequest
-
-```json
-{ "email": "user@example.com", "password": "StrongPass1" }
-```
-
-Rules:
-- `email`: required, valid email
-- `password`: required
-
-### 8.3 RequestEmailVerificationRequest
-
-```json
-{ "email": "user@example.com" }
-```
-
-Rules:
-- `email`: required, valid email, max length 320
-
-### 8.4 VerifyEmailRequest
-
-```json
-{ "token": "opaque-token" }
-```
-
-Rules:
-- `token`: required, max length 512
-
-### 8.5 ForgotPasswordRequest
-
-```json
-{ "email": "user@example.com" }
-```
-
-Rules:
-- `email`: required, valid email, max length 320
-
-### 8.6 ResetPasswordRequest
-
-```json
-{ "token": "opaque-token", "newPassword": "NewStrong1" }
-```
-
-Rules:
-- `token`: required, max length 512
-- `newPassword`: required, min length 8, uppercase + lowercase + number required
-
-### 8.7 CreateProductRequest
-
-```json
-{
-  "sellerUserId": "00000000-0000-0000-0000-000000000000",
-  "title": "MacBook Pro 14",
-  "description": "Like new, 16GB RAM",
-  "priceText": "$1500",
-  "condition": "LikeNew",
-  "imageUrls": ["https://.../1.jpg", "https://.../2.jpg"]
-}
-```
-
-Rules:
-- `sellerUserId`: required GUID
-- `title`: required, max length 200
-- `description`: required, max length 2000
-- `priceText`: optional, max length 100
-- `condition`: must be valid enum
-- each `imageUrls[]`: required, max length 500
-
-### 8.8 UpdateProductRequest
-
-```json
-{
-  "title": "Updated title",
-  "description": "Updated description",
-  "priceText": "$1400",
-  "condition": "Used",
-  "isActive": true
-}
-```
-
-Rules:
-- path provides `productId`; body has same model property set internally by API
-- `title`: required, max length 200
-- `description`: required, max length 2000
-- `priceText`: optional, max length 100
-- `condition`: valid enum
-
-### 8.9 AddProductImageRequest
-
-```json
-{ "imageUrl": "https://.../3.jpg", "order": 2 }
-```
-
-Rules:
-- path provides `productId`; body model property set internally by API
-- `imageUrl`: required, max length 500
-- `order`: must be >= 0
-
-### 8.10 StartChatRequest
-
-```json
-{
-  "productId": "00000000-0000-0000-0000-000000000000",
-  "buyerId": "00000000-0000-0000-0000-000000000000",
-  "sellerId": "00000000-0000-0000-0000-000000000000"
-}
-```
-
-Rules:
-- all three GUIDs required
-
-### 8.11 SendMessageRequest
-
-```json
-{
-  "senderId": "00000000-0000-0000-0000-000000000000",
-  "content": "Is this still available?"
-}
-```
-
-Rules:
-- path provides `chatRoomId`; body model property set internally by API
-- `senderId`: required GUID
-- `content`: required, max length 2000
-
-### 8.12 CreateReportRequest
-
-```json
-{
-  "reporterId": "00000000-0000-0000-0000-000000000000",
-  "targetType": "Product",
-  "targetId": "00000000-0000-0000-0000-000000000000",
-  "reason": "Fraudulent listing"
-}
-```
-
-Rules:
-- `reporterId`: required GUID
-- `targetType`: valid enum
-- `targetId`: required GUID
-- `reason`: required, max length 1000
-
-### 8.13 UpdateSellerListingLimitRequest
-
-```json
-{ "listingLimit": 25 }
-```
-
-Rules:
-- `listingLimit`: must be >= 0
-
----
-
-## 9) Endpoint reference by controller
-
-## 9.1 Auth endpoints (`/api/auth`)
-
-### POST `/api/auth/register`
-
-- **Auth required:** No
-- **Body:** `RegisterUserRequest`
-- **Success:** `200 OK` + `AuthResponseDto`
-- **Behavior details:**
-  - Email is normalized to lowercase + trimmed.
-  - If email already exists (including soft-deleted lookup path), returns `409 email_already_exists`.
-  - User is created with role `User`, `EmailVerified=false`, `SellerRating=0`, `ListingLimit=10`.
-  - Verification email flow is triggered.
-
-### POST `/api/auth/login`
-
-- **Auth required:** No
-- **Body:** `LoginRequest`
-- **Success:** `200 OK` + `AuthResponseDto`
-- **Errors:**
-  - `401 invalid_credentials` for unknown email / wrong password
-  - `401 email_not_verified` if user has not verified email
-
-### POST `/api/auth/logout`
-
-- **Auth required:** Yes (`Bearer`)
-- **Body:** none
-- **Success:** `200 OK`
-
-```json
-{ "message": "Logged out successfully." }
-```
-
-- **Behavior:**
-  - Reads `jti` and `exp` from current JWT.
-  - Revokes `jti` until token expiry.
-  - Clears cookies named `access_token` and `refresh_token` (even though auth is header-based).
-
-### POST `/api/auth/request-email-verification`
-
-- **Auth required:** No
-- **Body:** `RequestEmailVerificationRequest`
-- **Success:** always `200 OK`
-
-```json
-{ "message": "If the account exists and is unverified, a verification email has been sent." }
-```
-
-- **Behavior:** Anti-enumeration style response (same generic message).
-
-### POST `/api/auth/verify-email`
-
-- **Auth required:** No
-- **Body:** `VerifyEmailRequest`
-- **Success:** `200 OK`
-
-```json
-{ "message": "Email verified successfully." }
-```
-
-- **Error:** `400 invalid_email_verification_token` if token invalid/expired
-
-### POST `/api/auth/forgot-password`
-
-- **Auth required:** No
-- **Body:** `ForgotPasswordRequest`
-- **Success:** always `200 OK`
-
-```json
-{ "message": "If an account exists, a reset link has been sent." }
-```
-
-### POST `/api/auth/reset-password`
-
-- **Auth required:** No
-- **Body:** `ResetPasswordRequest`
-- **Success:** `200 OK`
-
-```json
-{ "message": "Password reset successfully." }
-```
-
-- **Errors:** `400 invalid_reset_token` when token invalid/expired
-- **Behavior:** also clears `access_token`/`refresh_token` cookies.
-
-### POST `/api/auth/become-seller`
-
-- **Auth required:** Yes (`Bearer`)
-- **Body:** none
-- **Success:** `200 OK` + `AuthResponseDto`
-- **Behavior:**
-  - If current role is `User`, it changes to `Seller`.
-  - Returns a fresh JWT reflecting current role.
-
-### GET `/api/auth/me`
-
-- **Auth required:** Yes (`Bearer`)
-- **Body:** none
-- **Success:** `200 OK` + `UserDto`
-- **Errors:**
-  - `401 invalid_user_token` if auth claim parsing fails
-  - `404 user_not_found` if user no longer exists
-
----
-
-## 9.2 Product endpoints (`/api/products`)
-
-### POST `/api/products`
-
-- **Auth required:** Yes (`SellerOnly` => Seller/Admin)
-- **Body:** `CreateProductRequest`
-- **Success:** `201 Created` + `ProductDto`
-- **Location header:** points to `GET /api/products/{productId}`
-- **Business rules:**
-  - `sellerUserId` must exist and be seller-capable.
-  - Enforces active listing capacity against seller `ListingLimit`.
-  - New product is always created with `isActive = true`.
-  - Images are saved with order indices from array order (`0,1,2...`).
-
-### GET `/api/products/{productId}`
-
-- **Auth required:** No
-- **Success:** `200 OK` + `ProductDto`
-- **Error:** `404 product_not_found`
-
-### GET `/api/products/active?pageNumber=1&pageSize=20`
-
-- **Auth required:** No
-- **Success:** `200 OK` + `PagedResult<ProductDto>`
-- **Validation:** pagination rules apply
-
-### GET `/api/products/by-seller/{sellerUserId}?pageNumber=1&pageSize=20`
-
-- **Auth required:** No explicit `[Authorize]` (currently publicly accessible)
-- **Success:** `200 OK` + `PagedResult<ProductDto>`
-
-### PUT `/api/products/{productId}`
-
-- **Auth required:** Yes (`SellerOnly`)
-- **Body:** `UpdateProductRequest` (path id overrides body `productId`)
-- **Success:** `200 OK` + `ProductDto`
-- **Errors:**
-  - `404 product_not_found`
-  - `409 listing_limit_reached` when switching/keeping active exceeds seller capacity
-
-### POST `/api/products/{productId}/images`
-
-- **Auth required:** Yes (`SellerOnly`)
-- **Body:** `AddProductImageRequest` (path id overrides body `productId`)
-- **Success:** `200 OK` + `ProductImageDto`
-- **Error:** `404 product_not_found`
-
-### DELETE `/api/products/images/{imageId}`
-
-- **Auth required:** Yes (`SellerOnly`)
-- **Body:** none
-- **Success:** `204 No Content`
-- **Behavior:** idempotent; if image does not exist, still returns `204`.
-
----
-
-## 9.3 Chat endpoints (`/api/chats`)
-
-> Note: Chat controller has no `[Authorize]` currently, so endpoints are publicly callable unless gateway/auth layer is added externally.
-
-### POST `/api/chats`
-
-- **Auth required:** No attribute-level auth
-- **Body:** `StartChatRequest`
-- **Success:** `201 Created` + `ChatRoomDto`
-- **Behavior:**
-  - If same `(productId,buyerId,sellerId)` room already exists, returns existing room.
-  - Otherwise creates a new room.
-
-### GET `/api/chats/{chatRoomId}`
-
-- **Auth required:** No attribute-level auth
-- **Success:** `200 OK` + `ChatRoomDto`
-- **Error:** `404 chat_room_not_found`
-
-### GET `/api/chats/by-user/{userId}?pageNumber=1&pageSize=20`
-
-- **Auth required:** No attribute-level auth
-- **Success:** `200 OK` + `PagedResult<ChatRoomDto>`
-
-### POST `/api/chats/{chatRoomId}/messages`
-
-- **Auth required:** No attribute-level auth
-- **Body:** `SendMessageRequest` (path id overrides body `chatRoomId`)
-- **Success:** `200 OK` + `MessageDto`
-- **Error:** `404 chat_room_not_found`
-- **Behavior:** `sentAt` set server-side (`UtcNow`).
-
-### GET `/api/chats/{chatRoomId}/messages?pageNumber=1&pageSize=20`
-
-- **Auth required:** No attribute-level auth
-- **Success:** `200 OK` + `PagedResult<MessageDto>`
-
----
-
-## 9.4 Report endpoints (`/api/reports`)
-
-> Note: Report controller also has no `[Authorize]` in current implementation.
-
-### POST `/api/reports`
-
-- **Auth required:** No attribute-level auth
-- **Body:** `CreateReportRequest`
-- **Success:** `200 OK` + `ReportDto`
-
-### GET `/api/reports/by-target?targetType=Product&targetId=<guid>&pageNumber=1&pageSize=20`
-
-- **Auth required:** No attribute-level auth
-- **Success:** `200 OK` + `PagedResult<ReportDto>`
-
-### GET `/api/reports/by-reporter/{reporterId}?pageNumber=1&pageSize=20`
-
-- **Auth required:** No attribute-level auth
-- **Success:** `200 OK` + `PagedResult<ReportDto>`
-
----
-
-## 9.5 Admin seller management endpoints (`/api/admin/sellers`)
-
-### PATCH `/api/admin/sellers/{sellerUserId}/listing-limit`
-
-- **Auth required:** Yes, role `Admin`
-- **Body:** `UpdateSellerListingLimitRequest`
-- **Success:** `200 OK` + `UserDto`
-- **Errors:**
-  - `404 seller_not_found`
-  - `400 user_not_seller` (when target user is not Seller/Admin)
-
----
-
-## 10) Frontend implementation checklist (practical)
-
-1. Build a typed API layer using models in section 7.
-2. Centralize error parsing:
-   - read `status`, `title`, `detail`, `errorCode`, optional `errors`.
-3. Inject bearer token on protected routes only.
-4. Handle auth failures:
-   - clear session on `401`.
-5. For forms, surface per-field FluentValidation messages from `errors` dictionary.
-6. Use enum strings exactly as documented.
-7. For paged lists, always pass `pageNumber` + `pageSize`; keep UI page size <= 100.
-8. For register/login/role upgrade, replace stored token with returned `accessToken`.
-9. Expect generic success response for email verification and forgot-password request flows.
-10. If you require strict privacy/ownership checks for chats/reports/seller data, add backend authorization rules before production use.
-
----
-
-## 11) Minimal end-to-end call sequence examples
-
-### 11.1 New user onboarding
-
-1. `POST /api/auth/register`
-2. `POST /api/auth/request-email-verification` (if needed)
-3. `POST /api/auth/verify-email`
-4. `POST /api/auth/login`
-5. `GET /api/auth/me`
-
-### 11.2 Seller flow
-
-1. User login
-2. `POST /api/auth/become-seller`
-3. `POST /api/products`
-4. `POST /api/products/{id}/images`
-5. `GET /api/products/by-seller/{sellerId}`
-
-### 11.3 Buyer + chat flow
-
-1. `GET /api/products/active`
-2. `POST /api/chats`
-3. `POST /api/chats/{chatRoomId}/messages`
-4. `GET /api/chats/{chatRoomId}/messages`
-
-### 11.4 Report flow
-
-1. `POST /api/reports`
-2. `GET /api/reports/by-target`
-
