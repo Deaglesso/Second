@@ -171,7 +171,6 @@ builder.Services.AddSwaggerGen(options =>
         Description = "JWT Authorization header using the Bearer scheme."
     });
 
-    options.OperationFilter<AuthorizeOperationFilter>();
 });
 
 var app = builder.Build();
