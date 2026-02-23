@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.OpenApi.Models;
+using Microsoft.OpenApi;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
 namespace Second.API.Infrastructure.Swagger
@@ -28,13 +28,14 @@ namespace Second.API.Infrastructure.Swagger
             operation.Security.Add(new OpenApiSecurityRequirement
             {
                 {
+                    // Use an inline scheme instance instead of setting a Reference property
                     new OpenApiSecurityScheme
                     {
-                        Reference = new OpenApiReference
-                        {
-                            Type = ReferenceType.SecurityScheme,
-                            Id = "Bearer"
-                        }
+                        Name = "Authorization",
+                        Type = SecuritySchemeType.Http,
+                        Scheme = "bearer",
+                        BearerFormat = "JWT",
+                        In = ParameterLocation.Header
                     },
                     new List<string>()
                 }
