@@ -1,4 +1,5 @@
 using System.IdentityModel.Tokens.Jwt;
+using System.Threading.RateLimiting;
 using System.Text;
 using System.Text.Json.Serialization;
 using FluentValidation;
@@ -59,6 +60,51 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy("SellerOnly", policy => policy.RequireRole("Seller", "Admin"));
 });
 
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
+    options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context =>
+    {
+        if (!HttpMethods.IsPost(context.Request.Method)
+            && !HttpMethods.IsPut(context.Request.Method)
+            && !HttpMethods.IsPatch(context.Request.Method)
+            && !HttpMethods.IsDelete(context.Request.Method))
+        {
+            return RateLimitPartition.GetNoLimiter("read_requests");
+        }
+
+        var clientIdentifier = GetClientIdentifier(context);
+        var partitionKey = $"{clientIdentifier}:{context.Request.Method}:{context.Request.Path}";
+
+        return RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey,
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 30,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0,
+                AutoReplenishment = true
+            });
+    });
+
+    options.AddPolicy("auth", context =>
+    {
+        var clientIdentifier = GetClientIdentifier(context);
+        var partitionKey = $"{clientIdentifier}:{context.Request.Path}";
+
+        return RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey,
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 5,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0,
+                AutoReplenishment = true
+            });
+    });
+});
+
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
     {
@@ -104,9 +150,15 @@ app.UseDefaultFiles();
 app.UseStaticFiles();
 
 app.UseCors("AllowFrontend");
+app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
 
 app.Run();
+
+static string GetClientIdentifier(HttpContext context)
+{
+    return context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+}
