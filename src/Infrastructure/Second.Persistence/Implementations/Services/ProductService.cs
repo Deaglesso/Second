@@ -9,6 +9,7 @@ using Second.Application.Dtos.Requests;
 using Second.Application.Exceptions;
 using Second.Application.Models;
 using Second.Domain.Entities;
+using Second.Domain.Enums;
 
 namespace Second.Persistence.Implementations.Services
 {
@@ -60,8 +61,9 @@ namespace Second.Persistence.Implementations.Services
                 Title = request.Title,
                 Description = request.Description,
                 PriceText = request.PriceText,
+                Price = request.Price,
                 Condition = request.Condition,
-                IsActive = true
+                Status = ProductStatus.Active
             };
 
             foreach (var (url, index) in request.ImageUrls.Select((imageUrl, order) => (imageUrl, order)))
@@ -110,7 +112,16 @@ namespace Second.Persistence.Implementations.Services
             PageRequest pageRequest,
             CancellationToken cancellationToken = default)
         {
+            return await GetActiveAsync(new GetActiveProductsRequest(), pageRequest, cancellationToken);
+        }
+
+        public async Task<PagedResult<ProductDto>> GetActiveAsync(
+            GetActiveProductsRequest request,
+            PageRequest pageRequest,
+            CancellationToken cancellationToken = default)
+        {
             var (items, totalCount) = await _productRepository.GetActiveAsync(
+                request,
                 pageRequest.Skip,
                 pageRequest.PageSize,
                 cancellationToken);
@@ -134,7 +145,7 @@ namespace Second.Persistence.Implementations.Services
                 throw new NotFoundAppException("Product not found.", "product_not_found");
             }
 
-            if (request.IsActive)
+            if (request.Status == ProductStatus.Active)
             {
                 var seller = await _userRepository.GetByIdAsync(existingProduct.SellerUserId, cancellationToken: cancellationToken);
                 if (seller is null)
@@ -153,8 +164,9 @@ namespace Second.Persistence.Implementations.Services
             existingProduct.Title = request.Title;
             existingProduct.Description = request.Description;
             existingProduct.PriceText = request.PriceText;
+            existingProduct.Price = request.Price;
             existingProduct.Condition = request.Condition;
-            existingProduct.IsActive = request.IsActive;
+            existingProduct.Status = request.Status;
 
             await _productRepository.UpdateAsync(existingProduct, cancellationToken);
 
@@ -194,6 +206,23 @@ namespace Second.Persistence.Implementations.Services
             await _productImageRepository.RemoveAsync(image, cancellationToken);
         }
 
+        public async Task DeleteAsync(Guid productId, Guid actorUserId, bool isAdmin, CancellationToken cancellationToken = default)
+        {
+            var product = await _productRepository.GetByIdAsync(productId, cancellationToken);
+            if (product is null)
+            {
+                return;
+            }
+
+            if (!isAdmin && product.SellerUserId != actorUserId)
+            {
+                throw new ForbiddenAppException("You are not allowed to archive this product.", "product_delete_forbidden");
+            }
+
+            product.Status = ProductStatus.Archived;
+            await _productRepository.UpdateAsync(product, cancellationToken);
+        }
+
         private static ProductDto MapProduct(Product product)
         {
             return new ProductDto
@@ -203,9 +232,11 @@ namespace Second.Persistence.Implementations.Services
                 Title = product.Title,
                 Description = product.Description,
                 PriceText = product.PriceText,
+                Price = product.Price,
                 Condition = product.Condition,
-                IsActive = product.IsActive,
+                Status = product.Status,
                 CreatedAt = product.CreatedAt,
+                UpdatedAt = product.UpdatedAt,
                 Images = product.Images
                     .OrderBy(image => image.Order)
                     .Select(MapProductImage)

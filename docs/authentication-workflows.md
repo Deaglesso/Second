@@ -61,20 +61,20 @@ Anti-enumeration controls:
 
 ## 4) Frontend integration contract (current API)
 
-Base auth route in this project is `/api/auth`.
+Base auth route in this project is `/api/v1/auth`.
 
 Public endpoints:
-- `POST /api/auth/register`
-- `POST /api/auth/login`
-- `POST /api/auth/request-email-verification`
-- `POST /api/auth/verify-email`
-- `POST /api/auth/forgot-password`
-- `POST /api/auth/reset-password`
+- `POST /api/v1/auth/register`
+- `POST /api/v1/auth/login`
+- `POST /api/v1/auth/request-email-verification`
+- `POST /api/v1/auth/verify-email`
+- `POST /api/v1/auth/forgot-password`
+- `POST /api/v1/auth/reset-password`
 
 Authorized endpoints (Bearer token required):
-- `GET /api/auth/me`
-- `POST /api/auth/logout`
-- `POST /api/auth/become-seller`
+- `GET /api/v1/auth/me`
+- `POST /api/v1/auth/logout`
+- `POST /api/v1/auth/become-seller`
 
 Important login behavior:
 - Login now requires verified email. If credentials are valid but email is not verified, API returns 401 with code `email_not_verified`.
@@ -87,7 +87,7 @@ Use these sections in your client QA page, Postman collection, or Cypress/Playwr
 
 **Goal**: user can register and receive token payload.
 
-1. Submit `POST /api/auth/register` with email + password.
+1. Submit `POST /api/v1/auth/register` with email + password.
 2. Expect 200 and response containing:
    - `userId`
    - `email`
@@ -100,7 +100,7 @@ Use these sections in your client QA page, Postman collection, or Cypress/Playwr
 
 **Goal**: verification email flow is triggerable.
 
-1. Submit `POST /api/auth/request-email-verification` with registered email.
+1. Submit `POST /api/v1/auth/request-email-verification` with registered email.
 2. Expect generic success message regardless of account state.
 3. Verify your email inbox/log sink received the verification link.
 
@@ -109,7 +109,7 @@ Use these sections in your client QA page, Postman collection, or Cypress/Playwr
 **Goal**: verification token enables account verification.
 
 1. Extract token from verification link.
-2. Submit `POST /api/auth/verify-email` with token.
+2. Submit `POST /api/v1/auth/verify-email` with token.
 3. Expect 200 with success message.
 4. Re-submit same token and expect failure (token should be invalid/expired/single use).
 
@@ -117,7 +117,7 @@ Use these sections in your client QA page, Postman collection, or Cypress/Playwr
 
 **Goal**: enforce policy and validate token issuance.
 
-1. Attempt `POST /api/auth/login` for an **unverified** account.
+1. Attempt `POST /api/v1/auth/login` for an **unverified** account.
    - Expect 401 with error code `email_not_verified`.
 2. Attempt login for a **verified** account.
    - Expect 200 and token payload.
@@ -127,7 +127,7 @@ Use these sections in your client QA page, Postman collection, or Cypress/Playwr
 
 **Goal**: authenticated identity works end-to-end.
 
-1. Call `GET /api/auth/me` with header:
+1. Call `GET /api/v1/auth/me` with header:
    - `Authorization: Bearer <accessToken>`
 2. Expect 200 and user profile with matching email/id/role.
 3. Call without header and expect 401.
@@ -136,16 +136,16 @@ Use these sections in your client QA page, Postman collection, or Cypress/Playwr
 
 **Goal**: logged-out token is no longer valid.
 
-1. Call `POST /api/auth/logout` with valid Bearer token.
+1. Call `POST /api/v1/auth/logout` with valid Bearer token.
 2. Expect 200 `Logged out successfully`.
-3. Reuse same token on `GET /api/auth/me`.
+3. Reuse same token on `GET /api/v1/auth/me`.
    - Expect 401 (revoked token).
 
 ### Section G — Forgot password
 
 **Goal**: password reset request is enumeration-safe.
 
-1. Call `POST /api/auth/forgot-password` with existing email.
+1. Call `POST /api/v1/auth/forgot-password` with existing email.
 2. Call again with non-existing email.
 3. Ensure both responses are the same generic success message.
 4. Verify reset email appears for existing account only.
@@ -154,7 +154,7 @@ Use these sections in your client QA page, Postman collection, or Cypress/Playwr
 
 **Goal**: reset token updates password and invalidates old secret.
 
-1. Submit `POST /api/auth/reset-password` with token + new password.
+1. Submit `POST /api/v1/auth/reset-password` with token + new password.
 2. Expect 200.
 3. Login with old password should fail.
 4. Login with new password should pass.
@@ -163,9 +163,9 @@ Use these sections in your client QA page, Postman collection, or Cypress/Playwr
 
 **Goal**: role change endpoint and role claim refresh.
 
-1. Login as normal user and call `POST /api/auth/become-seller` with token.
+1. Login as normal user and call `POST /api/v1/auth/become-seller` with token.
 2. Expect 200 and new token payload.
-3. Call `GET /api/auth/me` with new token and verify role changed to seller.
+3. Call `GET /api/v1/auth/me` with new token and verify role changed to seller.
 
 ## 6) Deployment readiness checklist (frontend)
 

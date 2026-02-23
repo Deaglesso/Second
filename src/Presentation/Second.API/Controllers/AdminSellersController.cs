@@ -10,7 +10,7 @@ using Second.Application.Dtos.Requests;
 namespace Second.API.Controllers
 {
     [ApiController]
-    [Route("api/admin/sellers")]
+    [Route("api/v1/admin/sellers")]
     [Authorize(Roles = "Admin")]
     public class AdminSellersController : ControllerBase
     {

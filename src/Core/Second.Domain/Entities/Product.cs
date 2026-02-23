@@ -15,9 +15,11 @@ namespace Second.Domain.Entities
 
         public string? PriceText { get; set; }
 
+        public int Price { get; set; }
+
         public ProductCondition Condition { get; set; }
 
-        public bool IsActive { get; set; }
+        public ProductStatus Status { get; set; }
 
         public User? SellerUser { get; set; }
 

@@ -21,6 +21,16 @@ namespace Second.Persistence.Data.Configurations
             builder.Property(product => product.PriceText)
                 .HasMaxLength(100);
 
+            builder.Property(product => product.Price)
+                .IsRequired();
+
+            builder.Property(product => product.Status)
+                .HasConversion<string>()
+                .HasMaxLength(20)
+                .IsRequired();
+
+            builder.HasIndex(product => product.Price);
+
             builder.HasOne(product => product.SellerUser)
                 .WithMany(user => user.Products)
                 .HasForeignKey(product => product.SellerUserId)

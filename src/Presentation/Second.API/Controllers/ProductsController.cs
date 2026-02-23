@@ -1,4 +1,5 @@
 using System;
+using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
@@ -13,7 +14,7 @@ using Second.Application.Models;
 namespace Second.API.Controllers
 {
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("api/v1/[controller]")]
     public class ProductsController : ControllerBase
     {
         private readonly IProductService _productService;
@@ -51,12 +52,23 @@ namespace Second.API.Controllers
         [AllowAnonymous]
         public async Task<ActionResult<PagedResult<ProductDto>>> GetActiveAsync(
             [FromQuery] PaginationParameters pagination,
+            [FromQuery] ActiveProductsQueryParameters query,
             CancellationToken cancellationToken)
         {
             ValidatePagination(pagination);
+            ValidateActiveProductsQuery(query);
 
             var pageRequest = new PageRequest { PageNumber = pagination.PageNumber, PageSize = pagination.PageSize };
-            var products = await _productService.GetActiveAsync(pageRequest, cancellationToken);
+            var request = new GetActiveProductsRequest
+            {
+                Query = query.Q,
+                Condition = query.Condition,
+                MinPrice = query.MinPrice,
+                MaxPrice = query.MaxPrice,
+                SortBy = query.SortBy
+            };
+
+            var products = await _productService.GetActiveAsync(request, pageRequest, cancellationToken);
             return Ok(products);
         }
 
@@ -105,6 +117,16 @@ namespace Second.API.Controllers
             return NoContent();
         }
 
+        [HttpDelete("{productId:guid}")]
+        [Authorize(Policy = "SellerOnly")]
+        public async Task<IActionResult> DeleteAsync(Guid productId, CancellationToken cancellationToken)
+        {
+            var actorUserId = GetAuthenticatedUserId();
+            var isAdmin = User.IsInRole("Admin");
+            await _productService.DeleteAsync(productId, actorUserId, isAdmin, cancellationToken);
+            return NoContent();
+        }
+
         private static void ValidatePagination(PaginationParameters pagination)
         {
             if (pagination.IsValid())
@@ -115,6 +137,41 @@ namespace Second.API.Controllers
             throw new BadRequestAppException(
                 $"PageNumber must be >= 1 and PageSize must be between 1 and {PaginationParameters.MaxPageSize}.",
                 "invalid_pagination_parameters");
+        }
+
+        private static void ValidateActiveProductsQuery(ActiveProductsQueryParameters query)
+        {
+            if (query.MinPrice.HasValue && query.MinPrice.Value < 0)
+            {
+                throw new BadRequestAppException("minPrice must be greater than or equal to 0.", "invalid_min_price");
+            }
+
+            if (query.MaxPrice.HasValue && query.MaxPrice.Value < 0)
+            {
+                throw new BadRequestAppException("maxPrice must be greater than or equal to 0.", "invalid_max_price");
+            }
+
+            if (query.MinPrice.HasValue && query.MaxPrice.HasValue && query.MinPrice.Value > query.MaxPrice.Value)
+            {
+                throw new BadRequestAppException("minPrice cannot be greater than maxPrice.", "invalid_price_range");
+            }
+
+            var sortBy = query.SortBy.ToLowerInvariant();
+            if (sortBy != "newest" && sortBy != "price_asc" && sortBy != "price_desc")
+            {
+                throw new BadRequestAppException("sortBy must be one of: newest, price_asc, price_desc.", "invalid_sort_by");
+            }
+        }
+
+        private Guid GetAuthenticatedUserId()
+        {
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!Guid.TryParse(userIdClaim, out var userId))
+            {
+                throw new UnauthorizedAppException("Invalid user token.", "invalid_user_token");
+            }
+
+            return userId;
         }
     }
 }

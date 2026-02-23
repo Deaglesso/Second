@@ -21,7 +21,7 @@
           <li>Register a user.</li>
           <li>Request and verify email token.</li>
           <li>Login and let this page store your access token in memory.</li>
-          <li>Call protected endpoints like <code>/api/auth/me</code>.</li>
+          <li>Call protected endpoints like <code>/api/v1/auth/me</code>.</li>
         </ol>
         <p class="warning">Token storage is in-memory only for testing. Refreshing page clears it.</p>
       </div>
@@ -50,57 +50,57 @@
             <h3>Register</h3>
             <label>Email <input name="email" type="email" required /></label>
             <label>Password <input name="password" type="password" required /></label>
-            <button type="submit">POST /api/auth/register</button>
+            <button type="submit">POST /api/v1/auth/register</button>
           </form>
 
           <form class="card" data-endpoint="request-email-verification">
             <h3>Request Email Verification</h3>
             <label>Email <input name="email" type="email" required /></label>
-            <button type="submit">POST /api/auth/request-email-verification</button>
+            <button type="submit">POST /api/v1/auth/request-email-verification</button>
           </form>
 
           <form class="card" data-endpoint="verify-email">
             <h3>Verify Email</h3>
             <label>Verification token <textarea name="token" rows="3" required></textarea></label>
-            <button type="submit">POST /api/auth/verify-email</button>
+            <button type="submit">POST /api/v1/auth/verify-email</button>
           </form>
 
           <form class="card" data-endpoint="login">
             <h3>Login</h3>
             <label>Email <input name="email" type="email" required /></label>
             <label>Password <input name="password" type="password" required /></label>
-            <button type="submit">POST /api/auth/login</button>
+            <button type="submit">POST /api/v1/auth/login</button>
           </form>
 
           <form class="card" data-endpoint="me">
             <h3>Me</h3>
             <p>Uses bearer token from Session box.</p>
-            <button type="submit">GET /api/auth/me</button>
+            <button type="submit">GET /api/v1/auth/me</button>
           </form>
 
           <form class="card" data-endpoint="logout">
             <h3>Logout</h3>
             <p>Revokes current token jti server-side.</p>
-            <button type="submit">POST /api/auth/logout</button>
+            <button type="submit">POST /api/v1/auth/logout</button>
           </form>
 
           <form class="card" data-endpoint="forgot-password">
             <h3>Forgot Password</h3>
             <label>Email <input name="email" type="email" required /></label>
-            <button type="submit">POST /api/auth/forgot-password</button>
+            <button type="submit">POST /api/v1/auth/forgot-password</button>
           </form>
 
           <form class="card" data-endpoint="reset-password">
             <h3>Reset Password</h3>
             <label>Reset token <textarea name="token" rows="3" required></textarea></label>
             <label>New password <input name="newPassword" type="password" required /></label>
-            <button type="submit">POST /api/auth/reset-password</button>
+            <button type="submit">POST /api/v1/auth/reset-password</button>
           </form>
 
           <form class="card" data-endpoint="become-seller">
             <h3>Become Seller</h3>
             <p>Requires bearer token. Returns a new token with role claim.</p>
-            <button type="submit">POST /api/auth/become-seller</button>
+            <button type="submit">POST /api/v1/auth/become-seller</button>
           </form>
 
           <form class="card" data-endpoint="admin-update-listing-limit">
@@ -108,7 +108,7 @@
             <p>Requires an admin bearer token.</p>
             <label>Seller user id <input name="sellerUserId" type="text" required /></label>
             <label>Listing limit <input name="listingLimit" type="number" min="0" required /></label>
-            <button type="submit">PATCH /api/admin/sellers/{sellerUserId}/listing-limit</button>
+            <button type="submit">PATCH /api/v1/admin/sellers/{sellerUserId}/listing-limit</button>
           </form>
         </div>
 

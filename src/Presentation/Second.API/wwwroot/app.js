@@ -61,7 +61,7 @@ const handlers = {
       password: form.password.value,
     };
 
-    const endpoint = "/api/auth/register";
+    const endpoint = "/api/v1/auth/register";
     setLog(requestLog, { method: "POST", endpoint, payload });
     const result = await jsonRequest("POST", endpoint, payload);
     if (result?.body?.accessToken) {
@@ -72,13 +72,13 @@ const handlers = {
   },
   "request-email-verification": async (form) => {
     const payload = { email: form.email.value };
-    const endpoint = "/api/auth/request-email-verification";
+    const endpoint = "/api/v1/auth/request-email-verification";
     setLog(requestLog, { method: "POST", endpoint, payload });
     return jsonRequest("POST", endpoint, payload);
   },
   "verify-email": async (form) => {
     const payload = { token: form.token.value };
-    const endpoint = "/api/auth/verify-email";
+    const endpoint = "/api/v1/auth/verify-email";
     setLog(requestLog, { method: "POST", endpoint, payload });
     return jsonRequest("POST", endpoint, payload);
   },
@@ -88,7 +88,7 @@ const handlers = {
       password: form.password.value,
     };
 
-    const endpoint = "/api/auth/login";
+    const endpoint = "/api/v1/auth/login";
     setLog(requestLog, { method: "POST", endpoint, payload });
     const result = await jsonRequest("POST", endpoint, payload);
 
@@ -99,19 +99,19 @@ const handlers = {
     return result;
   },
   me: async () => {
-    const endpoint = "/api/auth/me";
+    const endpoint = "/api/v1/auth/me";
     setLog(requestLog, { method: "GET", endpoint, authenticated: true });
     return jsonRequest("GET", endpoint, null, { authenticated: true });
   },
   logout: async () => {
-    const endpoint = "/api/auth/logout";
+    const endpoint = "/api/v1/auth/logout";
     setLog(requestLog, { method: "POST", endpoint, authenticated: true });
     const result = await jsonRequest("POST", endpoint, {}, { authenticated: true });
     return result;
   },
   "forgot-password": async (form) => {
     const payload = { email: form.email.value };
-    const endpoint = "/api/auth/forgot-password";
+    const endpoint = "/api/v1/auth/forgot-password";
     setLog(requestLog, { method: "POST", endpoint, payload });
     return jsonRequest("POST", endpoint, payload);
   },
@@ -121,12 +121,12 @@ const handlers = {
       newPassword: form.newPassword.value,
     };
 
-    const endpoint = "/api/auth/reset-password";
+    const endpoint = "/api/v1/auth/reset-password";
     setLog(requestLog, { method: "POST", endpoint, payload });
     return jsonRequest("POST", endpoint, payload);
   },
   "become-seller": async () => {
-    const endpoint = "/api/auth/become-seller";
+    const endpoint = "/api/v1/auth/become-seller";
     setLog(requestLog, { method: "POST", endpoint, authenticated: true });
     const result = await jsonRequest("POST", endpoint, {}, { authenticated: true });
 
@@ -139,7 +139,7 @@ const handlers = {
   "admin-update-listing-limit": async (form) => {
     const sellerUserId = form.sellerUserId.value.trim();
     const payload = { listingLimit: Number(form.listingLimit.value) };
-    const endpoint = `/api/admin/sellers/${sellerUserId}/listing-limit`;
+    const endpoint = `/api/v1/admin/sellers/${sellerUserId}/listing-limit`;
     setLog(requestLog, { method: "PATCH", endpoint, payload, authenticated: true });
     return jsonRequest("PATCH", endpoint, payload, { authenticated: true });
   },

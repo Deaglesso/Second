@@ -21,6 +21,9 @@ namespace Second.Application.Validators
             RuleFor(request => request.PriceText)
                 .MaximumLength(100);
 
+            RuleFor(request => request.Price)
+                .GreaterThanOrEqualTo(0);
+
             RuleFor(request => request.Condition)
                 .IsInEnum();
 
