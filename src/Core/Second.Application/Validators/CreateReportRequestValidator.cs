@@ -7,9 +7,6 @@ namespace Second.Application.Validators
     {
         public CreateReportRequestValidator()
         {
-            RuleFor(request => request.ReporterId)
-                .NotEmpty();
-
             RuleFor(request => request.TargetType)
                 .IsInEnum();
 
