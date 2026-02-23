@@ -1,6 +1,8 @@
 using System;
+using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Second.API.Models;
 using Second.Application.Contracts.Services;
@@ -13,6 +15,7 @@ namespace Second.API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize]
     public class ChatsController : ControllerBase
     {
         private readonly IChatService _chatService;
@@ -65,6 +68,12 @@ namespace Second.API.Controllers
             [FromBody] SendMessageRequest request,
             CancellationToken cancellationToken)
         {
+            var authenticatedUserId = GetAuthenticatedUserId();
+            if (request.SenderId != authenticatedUserId)
+            {
+                throw new ForbiddenAppException("You cannot send messages as another user.", "sender_mismatch");
+            }
+
             var updatedRequest = request with { ChatRoomId = chatRoomId };
             var message = await _chatService.SendMessageAsync(updatedRequest, cancellationToken);
             return Ok(message);
@@ -93,6 +102,17 @@ namespace Second.API.Controllers
             throw new BadRequestAppException(
                 $"PageNumber must be >= 1 and PageSize must be between 1 and {PaginationParameters.MaxPageSize}.",
                 "invalid_pagination_parameters");
+        }
+
+        private Guid GetAuthenticatedUserId()
+        {
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!Guid.TryParse(userIdClaim, out var userId))
+            {
+                throw new UnauthorizedAppException("Invalid user token.", "invalid_user_token");
+            }
+
+            return userId;
         }
     }
 }
