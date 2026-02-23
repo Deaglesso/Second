@@ -11,5 +11,9 @@ namespace Second.Domain.Entities
         public string? PasswordResetTokenHash { get; set; }
 
         public DateTime? PasswordResetTokenExpiresAtUtc { get; set; }
+
+        public string? RefreshTokenHash { get; set; }
+
+        public DateTime? RefreshTokenExpiresAtUtc { get; set; }
     }
 }

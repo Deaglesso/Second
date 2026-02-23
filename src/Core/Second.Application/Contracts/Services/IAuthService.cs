@@ -12,6 +12,8 @@ namespace Second.Application.Contracts.Services
 
         Task<AuthResponseDto> LoginAsync(LoginRequest request, CancellationToken cancellationToken = default);
 
+        Task<AuthResponseDto> RefreshAsync(RefreshTokenRequest request, CancellationToken cancellationToken = default);
+
         Task<UserDto?> GetUserByIdAsync(Guid userId, CancellationToken cancellationToken = default);
 
         Task<AuthResponseDto> BecomeSellerAsync(Guid userId, CancellationToken cancellationToken = default);

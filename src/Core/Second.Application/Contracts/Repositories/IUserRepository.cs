@@ -16,6 +16,8 @@ namespace Second.Application.Contracts.Repositories
 
         Task<User?> GetByPasswordResetTokenHashAsync(string tokenHash, CancellationToken cancellationToken = default);
 
+        Task<User?> GetByRefreshTokenHashAsync(string tokenHash, CancellationToken cancellationToken = default);
+
         Task<IReadOnlyList<User>> GetDeletedUsersAsync(CancellationToken cancellationToken = default);
 
         Task AddAsync(User user, CancellationToken cancellationToken = default);
