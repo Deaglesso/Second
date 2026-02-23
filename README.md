@@ -72,3 +72,7 @@ docker compose down -v
 
 - Configuration is injected through `docker-compose.yml` environment variables.
 - `docker-compose.yml` reads email values from `.env` (or falls back to safe defaults).
+## API documentation
+
+- Complete frontend-focused API reference: `docs/api-reference.md`
+
