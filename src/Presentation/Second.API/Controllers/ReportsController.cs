@@ -1,6 +1,8 @@
 using System;
+using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Second.API.Models;
 using Second.Application.Contracts.Services;
@@ -14,6 +16,7 @@ namespace Second.API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize]
     public class ReportsController : ControllerBase
     {
         private readonly IReportService _reportService;
@@ -28,6 +31,12 @@ namespace Second.API.Controllers
             [FromBody] CreateReportRequest request,
             CancellationToken cancellationToken)
         {
+            var authenticatedUserId = GetAuthenticatedUserId();
+            if (request.ReporterId != authenticatedUserId)
+            {
+                throw new ForbiddenAppException("You cannot file reports as another user.", "reporter_mismatch");
+            }
+
             var report = await _reportService.CreateAsync(request, cancellationToken);
             return Ok(report);
         }
@@ -69,6 +78,17 @@ namespace Second.API.Controllers
             throw new BadRequestAppException(
                 $"PageNumber must be >= 1 and PageSize must be between 1 and {PaginationParameters.MaxPageSize}.",
                 "invalid_pagination_parameters");
+        }
+
+        private Guid GetAuthenticatedUserId()
+        {
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!Guid.TryParse(userIdClaim, out var userId))
+            {
+                throw new UnauthorizedAppException("Invalid user token.", "invalid_user_token");
+            }
+
+            return userId;
         }
     }
 }
