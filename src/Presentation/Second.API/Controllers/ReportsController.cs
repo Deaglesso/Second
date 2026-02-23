@@ -3,6 +3,7 @@ using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Second.API.Models;
 using Second.Application.Contracts.Services;
@@ -17,6 +18,12 @@ namespace Second.API.Controllers
     [ApiController]
     [Route("api/v1/[controller]")]
     [Authorize]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
     public class ReportsController : ControllerBase
     {
         private readonly IReportService _reportService;
@@ -32,13 +39,10 @@ namespace Second.API.Controllers
             CancellationToken cancellationToken)
         {
             var authenticatedUserId = GetAuthenticatedUserId();
-            if (request.ReporterId != authenticatedUserId)
-            {
-                throw new ForbiddenAppException("You cannot file reports as another user.", "reporter_mismatch");
-            }
+            var updatedRequest = request with { ReporterId = authenticatedUserId };
 
-            var report = await _reportService.CreateAsync(request, cancellationToken);
-            return Ok(report);
+            var report = await _reportService.CreateAsync(updatedRequest, cancellationToken);
+            return StatusCode(StatusCodes.Status201Created, report);
         }
 
         [HttpGet("by-target")]
