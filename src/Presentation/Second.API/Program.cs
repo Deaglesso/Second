@@ -10,6 +10,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 using Second.API.Infrastructure.Exceptions;
+using Second.API.Infrastructure.Swagger;
 using Second.Application.Contracts.Services;
 using Second.Application.Exceptions;
 using Second.Persistence;
