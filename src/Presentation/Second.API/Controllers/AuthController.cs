@@ -32,7 +32,7 @@ namespace Second.API.Controllers
         public async Task<ActionResult<AuthResponseDto>> RegisterAsync([FromBody] RegisterUserRequest request, CancellationToken cancellationToken)
         {
             var result = await _authService.RegisterAsync(request, cancellationToken);
-            return Ok(result);
+            return StatusCode(StatusCodes.Status201Created, result);
         }
 
         [HttpPost("login")]
@@ -41,6 +41,15 @@ namespace Second.API.Controllers
         public async Task<ActionResult<AuthResponseDto>> LoginAsync([FromBody] LoginRequest request, CancellationToken cancellationToken)
         {
             var result = await _authService.LoginAsync(request, cancellationToken);
+            return Ok(result);
+        }
+
+        [HttpPost("refresh")]
+        [AllowAnonymous]
+        [EnableRateLimiting("auth")]
+        public async Task<ActionResult<AuthResponseDto>> RefreshAsync([FromBody] RefreshTokenRequest request, CancellationToken cancellationToken)
+        {
+            var result = await _authService.RefreshAsync(request, cancellationToken);
             return Ok(result);
         }
 

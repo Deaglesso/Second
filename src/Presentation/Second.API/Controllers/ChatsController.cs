@@ -3,6 +3,7 @@ using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Second.API.Models;
 using Second.Application.Contracts.Services;
@@ -76,7 +77,7 @@ namespace Second.API.Controllers
 
             var updatedRequest = request with { ChatRoomId = chatRoomId };
             var message = await _chatService.SendMessageAsync(updatedRequest, cancellationToken);
-            return Ok(message);
+            return StatusCode(StatusCodes.Status201Created, message);
         }
 
         [HttpGet("{chatRoomId:guid}/messages")]

@@ -64,15 +64,7 @@ namespace Second.Persistence.Implementations.Services
 
             await RequestEmailVerificationAsync(new RequestEmailVerificationRequest { Email = user.Email }, cancellationToken);
 
-            var (token, expiresAtUtc) = _tokenService.GenerateToken(user);
-            return new AuthResponseDto
-            {
-                UserId = user.Id,
-                Email = user.Email,
-                Role = user.Role,
-                AccessToken = token,
-                ExpiresAtUtc = expiresAtUtc
-            };
+            return await IssueAuthTokensAsync(user, cancellationToken);
         }
 
         public async Task<AuthResponseDto> LoginAsync(LoginRequest request, CancellationToken cancellationToken = default)
@@ -96,15 +88,19 @@ namespace Second.Persistence.Implementations.Services
                 throw new UnauthorizedAppException("Please verify your email before logging in.", "email_not_verified");
             }
 
-            var (token, expiresAtUtc) = _tokenService.GenerateToken(user);
-            return new AuthResponseDto
+            return await IssueAuthTokensAsync(user, cancellationToken);
+        }
+
+        public async Task<AuthResponseDto> RefreshAsync(RefreshTokenRequest request, CancellationToken cancellationToken = default)
+        {
+            var tokenHash = ComputeHash(request.RefreshToken);
+            var user = await _userRepository.GetByRefreshTokenHashAsync(tokenHash, cancellationToken);
+            if (user is null || !user.RefreshTokenExpiresAtUtc.HasValue || user.RefreshTokenExpiresAtUtc.Value < DateTime.UtcNow)
             {
-                UserId = user.Id,
-                Email = user.Email,
-                Role = user.Role,
-                AccessToken = token,
-                ExpiresAtUtc = expiresAtUtc
-            };
+                throw new UnauthorizedAppException("The refresh token is invalid or expired.", "invalid_refresh_token");
+            }
+
+            return await IssueAuthTokensAsync(user, cancellationToken);
         }
 
         public async Task<AuthResponseDto> BecomeSellerAsync(Guid userId, CancellationToken cancellationToken = default)
@@ -121,15 +117,7 @@ namespace Second.Persistence.Implementations.Services
                 await _userRepository.UpdateAsync(user, cancellationToken);
             }
 
-            var (token, expiresAtUtc) = _tokenService.GenerateToken(user);
-            return new AuthResponseDto
-            {
-                UserId = user.Id,
-                Email = user.Email,
-                Role = user.Role,
-                AccessToken = token,
-                ExpiresAtUtc = expiresAtUtc
-            };
+            return await IssueAuthTokensAsync(user, cancellationToken);
         }
 
         public Task LogoutAsync(string jti, DateTime expiresAtUtc, CancellationToken cancellationToken = default)
@@ -216,6 +204,8 @@ namespace Second.Persistence.Implementations.Services
             user.PasswordHash = _passwordHasher.HashPassword(user, request.NewPassword);
             user.PasswordResetTokenHash = null;
             user.PasswordResetTokenExpiresAtUtc = null;
+            user.RefreshTokenHash = null;
+            user.RefreshTokenExpiresAtUtc = null;
             await _userRepository.UpdateAsync(user, cancellationToken);
         }
 
@@ -236,6 +226,28 @@ namespace Second.Persistence.Implementations.Services
                 SellerRating = user.SellerRating,
                 ListingLimit = user.ListingLimit,
                 CreatedAt = user.CreatedAt
+            };
+        }
+
+        private async Task<AuthResponseDto> IssueAuthTokensAsync(User user, CancellationToken cancellationToken)
+        {
+            var (accessToken, accessTokenExpiresAtUtc) = _tokenService.GenerateToken(user);
+            var refreshToken = GenerateOpaqueToken();
+            var refreshTokenExpiresAtUtc = DateTime.UtcNow.AddDays(30);
+
+            user.RefreshTokenHash = ComputeHash(refreshToken);
+            user.RefreshTokenExpiresAtUtc = refreshTokenExpiresAtUtc;
+            await _userRepository.UpdateAsync(user, cancellationToken);
+
+            return new AuthResponseDto
+            {
+                UserId = user.Id,
+                Email = user.Email,
+                Role = user.Role,
+                AccessToken = accessToken,
+                ExpiresAtUtc = accessTokenExpiresAtUtc,
+                RefreshToken = refreshToken,
+                RefreshTokenExpiresAtUtc = refreshTokenExpiresAtUtc
             };
         }
 

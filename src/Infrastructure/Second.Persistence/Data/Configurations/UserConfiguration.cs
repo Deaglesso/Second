@@ -43,6 +43,9 @@ namespace Second.Persistence.Data.Configurations
 
             builder.Property(user => user.PasswordResetTokenHash)
                 .HasMaxLength(256);
+
+            builder.Property(user => user.RefreshTokenHash)
+                .HasMaxLength(256);
         }
     }
 }

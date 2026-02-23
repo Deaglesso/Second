@@ -44,6 +44,12 @@ namespace Second.Persistence.Implementations.Repositories
                 .FirstOrDefaultAsync(user => user.PasswordResetTokenHash == tokenHash, cancellationToken);
         }
 
+        public async Task<User?> GetByRefreshTokenHashAsync(string tokenHash, CancellationToken cancellationToken = default)
+        {
+            return await _dbContext.Users
+                .FirstOrDefaultAsync(user => user.RefreshTokenHash == tokenHash, cancellationToken);
+        }
+
         public async Task<IReadOnlyList<User>> GetDeletedUsersAsync(CancellationToken cancellationToken = default)
         {
             return await _dbContext.Users
