@@ -17,6 +17,12 @@ namespace Second.API.Controllers
     [ApiController]
     [Route("api/v1/[controller]")]
     [Authorize]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
     public class ChatsController : ControllerBase
     {
         private readonly IChatService _chatService;
@@ -70,12 +76,12 @@ namespace Second.API.Controllers
             CancellationToken cancellationToken)
         {
             var authenticatedUserId = GetAuthenticatedUserId();
-            if (request.SenderId != authenticatedUserId)
+            var updatedRequest = request with
             {
-                throw new ForbiddenAppException("You cannot send messages as another user.", "sender_mismatch");
-            }
+                ChatRoomId = chatRoomId,
+                SenderId = authenticatedUserId
+            };
 
-            var updatedRequest = request with { ChatRoomId = chatRoomId };
             var message = await _chatService.SendMessageAsync(updatedRequest, cancellationToken);
             return StatusCode(StatusCodes.Status201Created, message);
         }

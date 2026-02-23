@@ -1,13 +1,16 @@
 using System.IdentityModel.Tokens.Jwt;
-using System.Threading.RateLimiting;
 using System.Text;
 using System.Text.Json.Serialization;
+using System.Threading.RateLimiting;
 using FluentValidation;
 using FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
 using Second.API.Infrastructure.Exceptions;
+using Second.API.Infrastructure.Swagger;
 using Second.Application.Contracts.Services;
 using Second.Application.Exceptions;
 using Second.Persistence;
@@ -63,6 +66,11 @@ builder.Services.AddAuthorization(options =>
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.OnRejected = async (context, cancellationToken) =>
+    {
+        context.HttpContext.Response.Headers.RetryAfter = "60";
+        await context.HttpContext.Response.WriteAsync("Too many requests.", cancellationToken);
+    };
 
     options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context =>
     {
@@ -115,10 +123,25 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
     {
-        policy
-            .WithOrigins("http://localhost:3000")
-            .AllowAnyHeader()
-            .AllowAnyMethod();
+        var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
+            ?? Array.Empty<string>();
+
+        if (allowedOrigins.Length == 0)
+        {
+            var frontendBaseUrl = builder.Configuration["Frontend:BaseUrl"];
+            if (!string.IsNullOrWhiteSpace(frontendBaseUrl))
+            {
+                allowedOrigins = new[] { frontendBaseUrl };
+            }
+        }
+
+        if (allowedOrigins.Length > 0)
+        {
+            policy.WithOrigins(allowedOrigins).AllowAnyHeader().AllowAnyMethod();
+            return;
+        }
+
+        policy.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod();
     });
 });
 
@@ -127,7 +150,29 @@ builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(options =>
+{
+    options.SwaggerDoc("v1", new OpenApiInfo { Title = "Second API", Version = "v1" });
+    options.SupportNonNullableReferenceTypes();
+
+    options.MapType<ProblemDetails>(() => new OpenApiSchema
+    {
+        Type = "object",
+        AdditionalPropertiesAllowed = true
+    });
+
+    options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Name = "Authorization",
+        Type = SecuritySchemeType.Http,
+        Scheme = "bearer",
+        BearerFormat = "JWT",
+        In = ParameterLocation.Header,
+        Description = "JWT Authorization header using the Bearer scheme."
+    });
+
+    options.OperationFilter<AuthorizeOperationFilter>();
+});
 
 var app = builder.Build();
 
@@ -162,3 +207,5 @@ static string GetClientIdentifier(HttpContext context)
 {
     return context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
 }
+
+public partial class Program;

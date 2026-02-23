@@ -7,12 +7,6 @@ namespace Second.Application.Validators
     {
         public SendMessageRequestValidator()
         {
-            RuleFor(request => request.ChatRoomId)
-                .NotEmpty();
-
-            RuleFor(request => request.SenderId)
-                .NotEmpty();
-
             RuleFor(request => request.Content)
                 .NotEmpty()
                 .MaximumLength(2000);
