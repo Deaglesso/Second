@@ -48,7 +48,15 @@ It provides a single HTTP API for all primary marketplace operations so web/mobi
 - **Base API prefix:** `/api`
 - **Current versioning strategy:** URI versioning via `/api/v1/...`.
 
+| Environment | Base URL | Purpose | Data policy |
+|---|---|---|---|
+| Local development | `http://localhost:8080` | Developer testing | Ephemeral/local |
+| Sandbox (recommended) | `https://sandbox.api.second.example` | Pre-production integration testing | Non-production test data |
+| Production | `https://api.second.example` | Live traffic | Real customer data |
+
 > **Note:** Current stable base path is `/api/v1/...`. Introduce `/api/v2/...` for future breaking changes and keep a migration window.
+
+> **Warning:** Never point automated tests at production unless they are explicitly read-only tests with production-safe credentials.
 
 Suggested environments:
 
@@ -83,6 +91,26 @@ Authorization: Bearer <accessToken>
 
 > **Warning:** No refresh-token endpoint currently exists. Re-authenticate when token expires.
 
+### Scopes / permissions model
+
+This API enforces **role-based permissions** rather than OAuth scopes:
+
+| Permission boundary | Enforced by |
+|---|---|
+| Authenticated-only actions | Valid bearer token |
+| Seller actions (create/edit products) | `Seller` role |
+| Admin actions (seller listing limits) | `Admin` role |
+
+### Token expiry and re-authentication flow
+
+1. Call protected endpoint with access token.
+2. If response is `401`, treat token as invalid/expired.
+3. Clear local auth state.
+4. Re-run login (`POST /api/v1/auth/login`) to obtain a new token.
+5. Retry the original protected request once with the new token.
+
+> **Note:** Keep login retry count low (recommended max 1) to avoid lockout-like behavior caused by repeatedly retrying invalid credentials.
+
 ### Roles and permissions
 
 - `User`: basic authenticated account.
@@ -97,6 +125,14 @@ Authorization: Bearer <accessToken>
 - Implement client-side request throttling and exponential backoff for transient failures.
 - Restrict frontend origin via CORS in production.
 - Use allow-listed backend domains in frontend configuration.
+
+### Security hardening checklist
+
+- Enforce HTTPS and reject mixed content on web clients.
+- Rotate API credentials for service-to-service integrations on a fixed schedule.
+- Use short-lived session storage for tokens and clear on browser close for high-risk apps.
+- Implement client-side and edge rate limiting for login, reset-password, and chat send actions.
+- If running in enterprise environments, allow traffic only from approved egress IP ranges.
 
 ### Platform-level security notes
 
@@ -273,6 +309,16 @@ print("me", me.status_code, me.json())
 ## 5) Endpoints / API Reference
 
 > **Format per endpoint:** method/path, purpose, auth, parameters, examples (cURL + JavaScript), response schema, success/error samples, status codes.
+
+### Endpoint catalog
+
+| Domain | Endpoint count | Base path |
+|---|---:|---|
+| Authentication | 9 | `/api/v1/auth` |
+| Products | 10 | `/api/v1/products` |
+| Chats | 4 | `/api/v1/chats` |
+| Reports | 2 | `/api/v1/reports` |
+| Admin seller controls | 1 | `/api/v1/admin/sellers` |
 
 ### Shared response schemas
 
@@ -1311,13 +1357,31 @@ Suggested client behavior:
 - Debounce rapid user actions (search/filter typing, repeated submits).
 - Add retry/backoff only for transient errors.
 
-If/when rate limits are added, expect common headers such as:
+### Planned plan-tier limits (documentation target)
+
+Until server-enforced limits are shipped, use the following defaults in clients and gateways:
+
+| Tier | Suggested sustained limit | Burst limit | Notes |
+|---|---:|---:|---|
+| Sandbox | 30 requests/minute | 10 requests/5 seconds | Keep CI noise low |
+| Production Standard | 120 requests/minute | 30 requests/10 seconds | Suitable for most web/mobile clients |
+| Production Enterprise | 600 requests/minute | 120 requests/10 seconds | High-volume integrations |
+
+If/when backend rate limits are enabled, expect common headers such as:
 
 - `X-RateLimit-Limit`
 - `X-RateLimit-Remaining`
 - `X-RateLimit-Reset`
+- `Retry-After` (for `429` responses)
 
 and HTTP `429 Too Many Requests` when exceeded.
+
+### Recommended `429` handling
+
+1. Read `Retry-After` header if present.
+2. Pause new requests for that API key/session until reset.
+3. Retry with exponential backoff + jitter.
+4. Surface a user-friendly message if retries continue to fail.
 
 ---
 
@@ -1331,6 +1395,16 @@ There are currently **no webhook endpoints/events** in this API.
 
 > **Note:** If webhooks are introduced, publish signature verification docs and replay protection guidance.
 
+### Forward-looking webhook contract (for planning)
+
+When webhooks are added, document each event with:
+
+- event name (for example `product.created`, `chat.message.created`),
+- delivery guarantees (at-least-once vs exactly-once),
+- retry schedule and max attempts,
+- JSON schema including optional fields,
+- signature algorithm and verification code samples.
+
 ---
 
 ## 9) SDKs & Libraries
@@ -1338,6 +1412,19 @@ There are currently **no webhook endpoints/events** in this API.
 ### Official SDKs
 
 No official SDK package is currently published.
+
+### Installation quick commands (community-standard clients)
+
+```bash
+# JavaScript / TypeScript
+npm install axios
+
+# Python
+python -m pip install requests
+
+# .NET (included in runtime)
+dotnet add package Microsoft.Extensions.Http
+```
 
 ### Recommended client libraries
 
@@ -1357,6 +1444,19 @@ No curated community SDK list is maintained yet.
 
 - Current API exposes versioned paths (`/api/v1/...`).
 - No formal semantic API version number is embedded in routes.
+
+### Change classification rules
+
+- **Breaking:** existing client code must change (field removal/rename, enum rename, stricter validation, response shape removal).
+- **Non-breaking:** additive only (new optional fields, new endpoints, new optional query parameters).
+
+### Migration guide checklist for breaking changes
+
+1. Publish impacted endpoints and payload diffs.
+2. Provide before/after request and response examples.
+3. Announce overlap period where `v1` and `v2` both run.
+4. Publish cutoff date and rollback strategy.
+5. Provide SDK/client update notes.
 
 ### Deprecation policy (recommended)
 
@@ -1379,6 +1479,8 @@ Because routes are not versioned yet, adopt:
 ---
 
 ## 11) FAQs & Troubleshooting
+
+> **Note:** For quick scanning, each answer includes the first action to try before escalating.
 
 1. **Why do I get `email_not_verified` on login?**  
    Verify email first using verification token flow.
